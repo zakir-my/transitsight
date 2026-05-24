@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TransitSight</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-brand">🚆 Transit<span>Sight</span></a>
+        <div class="nav-links">
+            <a href="/dashboard" class="active">Dashboard</a>
+            <a href="/admin">Admin</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card-header" style="margin-bottom: 8px;">
+            <h2>🚇 Live Transit Dashboard</h2>
+            <span id="last-updated" style="color: var(--text-secondary); font-size: 0.8em;"></span>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.9em;">
+            Select a route to view AI-powered crowd predictions and submit feedback.
+        </p>
+
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="🔍 Search routes..." oninput="searchRoutes(this.value)">
+            <button class="btn btn-outline" onclick="refreshAll()">🔄 Refresh</button>
+        </div>
+
+        <div id="loading-spinner" class="spinner"></div>
+        <div id="route-list"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

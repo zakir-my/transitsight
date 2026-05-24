@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransitSight - Smart Crowd Predictor</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-brand">🚆 Transit<span>Sight</span></a>
+        <div class="nav-links">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/admin">Admin</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="hero">
+            <h1>Smart <span>Crowd Predictions</span> for Malaysian Transit</h1>
+            <p>Know before you go. Real-time AI-powered crowd level predictions for LRT, MRT, KTM, and Monorail in Kuala Lumpur.</p>
+            <a href="/dashboard" class="btn btn-primary">View Live Dashboard →</a>
+        </div>
+
+        <div class="stats-grid" id="hero-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="route-count">—</div>
+                <div class="stat-label">Routes Tracked</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="prediction-count">—</div>
+                <div class="stat-label">Predictions Made</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="feedback-count">—</div>
+                <div class="stat-label">Crowd Reports</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🌱 Sustainable Cities & Communities (SDG 11)</div>
+            <p style="color: var(--text-secondary); margin-top: 8px; font-size: 0.9em;">
+                TransitSight directly advances SDG 11 by promoting safer and more efficient public transit usage.
+                By eliminating commuter guesswork and reducing overcrowding discomfort, we encourage higher
+                ridership — fundamentally reducing urban carbon footprints and traffic congestion.
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🚀 Getting Started</div>
+            <ol style="color: var(--text-secondary); margin: 12px 0 0 20px; line-height: 2;">
+                <li><strong>Check the Dashboard</strong> — View all transit routes and their current crowd predictions</li>
+                <li><strong>Select a Route</strong> — Get detailed predictions with AI confidence scores</li>
+                <li><strong>Report Crowd</strong> — Submit feedback to help improve prediction accuracy</li>
+                <li><strong>Admin Panel</strong> — View analytics, API health, and system stats</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Load stats on landing
+        fetch('/api/routes')
+            .then(r => r.json())
+            .then(d => document.getElementById('route-count').textContent = d.routes.length)
+            .catch(() => document.getElementById('route-count').textContent = '—');
+
+        fetch('/api/predict?route_id=KJL001')
+            .then(r => r.json())
+            .then(() => document.getElementById('prediction-count').textContent = 'Live')
+            .catch(() => {});
+    </script>
+</body>
+</html>

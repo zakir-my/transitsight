@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - TransitSight</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-brand">🚆 Transit<span>Sight</span></a>
+        <div class="nav-links">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/admin" class="active">Admin</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="login-screen">
+            <div class="login-form">
+                <h2 style="margin-bottom: 20px; text-align: center;">Admin Login</h2>
+                <input type="text" id="admin-user" placeholder="Username">
+                <input type="password" id="admin-pass" placeholder="Password">
+                <button class="btn btn-primary" style="width: 100%;" onclick="adminLogin()">Login</button>
+                <p id="login-error" style="color: var(--red); text-align: center; margin-top: 10px; display: none;">Invalid credentials</p>
+            </div>
+        </div>
+
+        <div id="admin-panel" style="display: none;">
+            <div class="card-header">
+                <h2>🛠️ Admin Dashboard</h2>
+                <button class="btn btn-outline btn-small" onclick="refreshAdmin()">🔄 Refresh</button>
+            </div>
+
+            <div class="stats-grid" id="admin-stats"></div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 10px;">📊 Crowd Level Distribution</div>
+                <div id="crowd-dist"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 10px;">🔌 API Health</div>
+                <div id="api-health"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 10px;">💬 Recent Feedback</div>
+                <div id="recent-feedback"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 10px;">📈 Prediction Accuracy (Last 7 Days)</div>
+                <div id="accuracy-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>
