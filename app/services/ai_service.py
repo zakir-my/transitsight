@@ -27,11 +27,17 @@ class AIPredictionService:
         return self._model
 
     def build_prompt(self, time: str, day: str, weather_condition: str,
-                     temperature: float, route_name: str, route_id: str) -> str:
+                     temperature: float, route_name: str, route_id: str,
+                     feedback_context: Optional[str] = None) -> str:
         """
         Build a structured prompt for the Gemini API.
-        The prompt asks the AI to classify crowd level based on contextual variables.
+        The prompt asks the AI to classify crowd level based on contextual variables
+        and optionally includes real user feedback for self-correction.
         """
+        feedback_line = ""
+        if feedback_context:
+            feedback_line = f"\n{feedback_context}\n"
+
         prompt = f"""You are TransitSight, a smart public transport crowd predictor for Malaysia.
 Your task is to predict the crowd level for a transit route based on the following context.
 
@@ -41,18 +47,19 @@ Context:
 - Day: {day}
 - Weather: {weather_condition}
 - Temperature: {temperature}°C
-
+{feedback_line}
 Based on your knowledge of typical crowd patterns in Malaysian public transit,
 classify the expected crowd level as exactly one of: Low, Medium, or Full.
 
 Consider these factors:
 - Peak hours (7-9 AM, 5-7 PM weekdays) tend to be Medium to Full
 - Midday and late evening tend to be Low to Medium
-- Rainy weather often increases crowding as更多人 prefer public transport
+- Rainy weather often increases crowding as more people prefer public transport
 - Weekends have different patterns than weekdays
 - Routes serving business districts peak on weekdays
 - Routes serving shopping/leisure areas peak on weekends and evenings
 - KL rail lines (LRT/MRT) are busiest during weekday rush hours
+- The user feedback data above represents what commuters actually reported — use it as ground truth calibration
 
 Respond with ONLY one word: Low, Medium, or Full
 """
@@ -63,15 +70,20 @@ Respond with ONLY one word: Low, Medium, or Full
                        temperature: float = 28.0) -> dict:
         """
         Predict crowd level for a route using Gemini API.
+        Incorporates real user feedback for self-correction.
         Falls back to rule-based logic if API is unavailable.
         """
         now = datetime.now()
         time_str = now.strftime("%H:%M")
         day_str = now.strftime("%A")
 
-        # Build prompt
+        # Get feedback context for this route
+        feedback_context = self._get_feedback_context(route_id)
+
+        # Build prompt with feedback
         prompt = self.build_prompt(time_str, day_str, weather_condition,
-                                   temperature, route_name, route_id)
+                                   temperature, route_name, route_id,
+                                   feedback_context)
 
         # Try Gemini API
         model = self._get_model()
@@ -80,16 +92,41 @@ Respond with ONLY one word: Low, Medium, or Full
                 response = model.generate_content(prompt)
                 raw = response.text.strip().upper()
                 return self._parse_response(raw, time_str, day_str,
-                                            weather_condition, temperature)
+                                            weather_condition, temperature,
+                                            feedback_context)
             except Exception:
                 pass  # Fall through to rule-based
 
-        # Rule-based fallback
+        # Rule-based fallback (now also feedback-aware)
         return self._rule_based_fallback(route_id, time_str, day_str,
-                                          weather_condition, temperature)
+                                          weather_condition, temperature,
+                                          feedback_context)
+
+    def _get_feedback_context(self, route_id: str) -> Optional[str]:
+        """Query feedback stats for a route and format as prompt context."""
+        try:
+            from app.services.feedback_service import FeedbackService
+            stats = FeedbackService.get_route_stats(route_id)
+            if stats["total_feedback"] > 0:
+                breakdown = stats["breakdown"]
+                low = breakdown.get("Low", 0)
+                med = breakdown.get("Medium", 0)
+                full = breakdown.get("Full", 0)
+                total = stats["total_feedback"]
+                accuracy = stats["accuracy_pct"]
+                acc_line = f" (prediction accuracy: {accuracy}%)" if accuracy else ""
+                return (
+                    f"- 📊 User feedback for this route: {total} report{'' if total == 1 else 's'}"
+                    f"{acc_line}\n"
+                    f"  - Low: {low}  |  Medium: {med}  |  Full: {full}"
+                )
+        except Exception:
+            pass
+        return None
 
     def _parse_response(self, raw: str, time_str: str, day_str: str,
-                        weather: str, temp: float) -> dict:
+                        weather: str, temp: float,
+                        feedback_context: Optional[str] = None) -> dict:
         """Parse Gemini response into a structured prediction."""
         # Extract the crowd level keyword
         for level in ["FULL", "MEDIUM", "LOW"]:
@@ -104,10 +141,11 @@ Respond with ONLY one word: Low, Medium, or Full
                     "temperature": temp,
                     "source": "gemini_api",
                 }
-        return self._rule_based_fallback(None, time_str, day_str, weather, temp)
+        return self._rule_based_fallback(None, time_str, day_str, weather, temp, feedback_context)
 
     def _rule_based_fallback(self, route_id: Optional[str], time_str: str,
-                              day_str: str, weather: str, temp: float) -> dict:
+                              day_str: str, weather: str, temp: float,
+                              feedback_context: Optional[str] = None) -> dict:
         """Route-aware rule-based crowd prediction when AI is unavailable.
         
         Different routes have different crowd patterns based on their type,
@@ -176,6 +214,29 @@ Respond with ONLY one word: Low, Medium, or Full
         if is_raining:
             logic_score += 0.15
             reasons.append("rain increases crowding")
+
+        # Feedback-based calibration
+        # Parse the feedback_context to adjust prediction based on real user reports
+        if feedback_context:
+            try:
+                # Extract numbers: "Low: 2  |  Medium: 3  |  Full: 5"
+                import re
+                low_m = re.search(r"Low:\s*(\d+)", feedback_context)
+                med_m = re.search(r"Medium:\s*(\d+)", feedback_context)
+                full_m = re.search(r"Full:\s*(\d+)", feedback_context)
+                low = int(low_m.group(1)) if low_m else 0
+                med = int(med_m.group(1)) if med_m else 0
+                full = int(full_m.group(1)) if full_m else 0
+                total_fb = low + med + full
+
+                if total_fb > 0:
+                    # Calculate feedback-weighted score (0 to 1)
+                    fb_score = (low * 0.0 + med * 0.5 + full * 1.0) / total_fb
+                    # Blend: 70% rule-based + 30% feedback
+                    logic_score = (logic_score * 0.7) + (fb_score * 0.3)
+                    reasons.append(f"calibrated with {total_fb} user report{'s' if total_fb != 1 else ''}")
+            except Exception:
+                pass  # If parsing fails, just use unadjusted score
 
         # Clamp and determine level
         logic_score = max(0.0, min(1.0, logic_score))
