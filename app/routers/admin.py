@@ -131,3 +131,33 @@ async def refresh_routes(auth=Depends(verify_admin)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/debug/config")
+async def debug_config(auth=Depends(verify_admin)):
+    """Debug endpoint to verify environment configuration."""
+    import sys
+    from pathlib import Path
+
+    dotenv_files = []
+    for p in [Path.cwd() / ".env", Path(__file__).parent.parent / ".env"]:
+        dotenv_files.append({
+            "path": str(p),
+            "exists": p.exists(),
+            "size": p.stat().st_size if p.exists() else 0,
+        })
+
+    # Check env vars (mask keys)
+    gemini_key = settings.GEMINI_API_KEY
+    env_file = Path.cwd() / ".env"
+
+    return {
+        "gemini_key_set": bool(gemini_key),
+        "gemini_key_length": len(gemini_key) if gemini_key else 0,
+        "gemini_key_preview": gemini_key[:10] + "..." if gemini_key else "NOT SET",
+        "gemini_model": settings.GEMINI_MODEL,
+        "dotenv_files": dotenv_files,
+        "working_directory": str(Path.cwd()),
+        "app_directory": str(Path(__file__).parent.parent),
+        "python_version": sys.version,
+    }

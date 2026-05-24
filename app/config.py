@@ -1,9 +1,24 @@
 """Application configuration from environment variables."""
 
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Try multiple locations for .env to support Windows and different working dirs
+dotenv_paths = [
+    Path.cwd() / ".env",
+    Path(__file__).parent.parent / ".env",  # project root relative to this file
+    Path.home() / "transitsight" / ".env",
+]
+for dotenv_path in dotenv_paths:
+    if dotenv_path.exists():
+        load_dotenv(dotenv_path, override=True)
+        print(f"  [config] Loaded .env from {dotenv_path}", file=sys.stderr)
+        break
+else:
+    # Try load_dotenv() with no args as last resort
+    load_dotenv(override=True)
 
 
 class Settings:

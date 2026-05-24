@@ -108,47 +108,87 @@ Respond with ONLY one word: Low, Medium, or Full
 
     def _rule_based_fallback(self, route_id: Optional[str], time_str: str,
                               day_str: str, weather: str, temp: float) -> dict:
-        """Rule-based crowd prediction when AI is unavailable."""
+        """Route-aware rule-based crowd prediction when AI is unavailable.
+        
+        Different routes have different crowd patterns based on their type,
+        location, and typical usage.
+        """
         hour = int(time_str.split(":")[0])
         is_weekend = day_str.lower() in ("saturday", "sunday")
         is_peak = (7 <= hour <= 9) or (17 <= hour <= 19)
-        is_off_peak = (10 <= hour <= 16)
+        is_midday = (10 <= hour <= 16)
+        is_evening = (20 <= hour <= 23) or (0 <= hour <= 6)
         is_raining = "rain" in weather.lower() or "shower" in weather.lower()
 
-        logic_score = 0.0
-        reasons = []
+        # Route-specific crowd profiles
+        # Each route has a base busyness level and weekend multiplier
+        route_profiles = {
+            # KL LRT lines - always busy
+            "KJL001": {"base": 0.6, "weekend_boost": 0.1, "name": "LRT Kelana Jaya"},
+            "KJL002": {"base": 0.5, "weekend_boost": 0.0, "name": "LRT Ampang"},
+            "KJL003": {"base": 0.5, "weekend_boost": 0.0, "name": "LRT Sri Petaling"},
+            # MRT lines - busy on weekdays, moderate weekends
+            "MRT01":  {"base": 0.6, "weekend_boost": -0.1, "name": "MRT Kajang"},
+            "MRT02":  {"base": 0.5, "weekend_boost": -0.1, "name": "MRT Putrajaya"},
+            # KTM - commuter focused
+            "KTM01":  {"base": 0.4, "weekend_boost": -0.2, "name": "KTM Port Klang"},
+            "KTM02":  {"base": 0.4, "weekend_boost": -0.2, "name": "KTM Seremban"},
+            "KTM03":  {"base": 0.5, "weekend_boost": 0.0, "name": "KTM ETS"},
+            # Monorail - tourist area, busy weekends
+            "MON01":  {"base": 0.4, "weekend_boost": 0.2, "name": "KL Monorail"},
+            # BRT - moderate
+            "BRT01":  {"base": 0.3, "weekend_boost": 0.0, "name": "BRT Sunway"},
+        }
 
+        profile = route_profiles.get(route_id, {"base": 0.4, "weekend_boost": 0.0, "name": ""})
+        logic_score = profile["base"]
+        reasons = [f"base crowding for {profile['name']}"]
+
+        # Time adjustments
         if is_weekend:
-            logic_score += 0.2
-            reasons.append("weekend")
-            if 10 <= hour <= 16:
-                logic_score += 0.3  # Midday weekend - shopping hours
-                reasons.append("midday weekend shopping")
-        else:
-            if is_peak:
-                logic_score += 0.7
-                reasons.append("weekday peak hours")
-            elif is_off_peak:
-                logic_score += 0.3
-                reasons.append("weekday off-peak")
+            logic_score += profile["weekend_boost"]
+            if profile["weekend_boost"] > 0:
+                reasons.append("busier on weekends (tourist/shopping area)")
+            elif profile["weekend_boost"] < 0:
+                reasons.append("quieter on weekends (commuter line)")
             else:
+                reasons.append("weekend")
+
+            if 10 <= hour <= 18:
+                logic_score += 0.15  # Weekend shopping/social hours
+                reasons.append("weekend active hours")
+            elif hour < 7 or hour > 22:
+                logic_score -= 0.2
+                reasons.append("late night weekend")
+        else:
+            # Weekday
+            if is_peak:
+                logic_score += 0.3
+                reasons.append("weekday peak hours")
+            elif is_midday:
                 logic_score += 0.1
-                reasons.append("late evening")
+                reasons.append("weekday midday")
+            elif is_evening:
+                logic_score -= 0.1
+                reasons.append("weekday evening")
 
+        # Weather boost
         if is_raining:
-            logic_score += 0.2
-            reasons.append("rainy weather increases crowding")
+            logic_score += 0.15
+            reasons.append("rain increases crowding")
 
-        # Determine level
-        if logic_score >= 0.7:
+        # Clamp and determine level
+        logic_score = max(0.0, min(1.0, logic_score))
+
+        if logic_score >= 0.65:
             level = "Full"
-            confidence = 0.6 + (logic_score * 0.2)
-        elif logic_score >= 0.4:
+            confidence = 0.55 + (min(logic_score, 0.9) * 0.3)
+        elif logic_score >= 0.35:
             level = "Medium"
-            confidence = 0.6 + (logic_score * 0.2)
+            confidence = 0.55 + (logic_score * 0.3)
         else:
             level = "Low"
-            confidence = 0.7 + ((1 - logic_score) * 0.2)
+            confidence = 0.65 + ((1 - logic_score) * 0.25)
 
         return {
             "crowd_level": level,
