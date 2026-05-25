@@ -1,8 +1,14 @@
 """Weather service - fetches real-time weather from data.gov.my."""
 
 import requests
+import time
 from typing import Optional
 from app.config import settings
+
+# Module-level cache — avoids redundant external API calls
+_weather_cache: Optional[dict] = None
+_weather_cache_time: float = 0
+CACHE_TTL = 60  # seconds
 
 
 class WeatherService:
@@ -15,18 +21,36 @@ class WeatherService:
         
         Returns weather data with condition, temperature, humidity.
         Falls back to simulated data if API is unavailable.
+        Results are cached for 60 seconds to avoid redundant API calls.
         """
+        global _weather_cache, _weather_cache_time
+
+        # Return cached data if still fresh
+        if _weather_cache and (time.time() - _weather_cache_time) < CACHE_TTL:
+            return _weather_cache
+
         try:
-            resp = requests.get(settings.WEATHER_BASE_URL, timeout=15)
+            resp = requests.get(settings.WEATHER_BASE_URL, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
                 if isinstance(data, list) and len(data) > 0:
-                    return WeatherService._parse_weather_response(data)
+                    _weather_cache = WeatherService._parse_weather_response(data)
+                    _weather_cache_time = time.time()
+                    return _weather_cache
+                _weather_cache = data
+                _weather_cache_time = time.time()
                 return data
         except (requests.RequestException, ValueError) as e:
-            return WeatherService._fallback_weather()
+            pass
 
-        return WeatherService._fallback_weather()
+        # Use cached data even if stale as fallback
+        if _weather_cache:
+            return _weather_cache
+
+        fallback = WeatherService._fallback_weather()
+        _weather_cache = fallback
+        _weather_cache_time = time.time()
+        return fallback
 
     @staticmethod
     def _parse_weather_response(data: list) -> dict:

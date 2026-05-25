@@ -21,21 +21,38 @@ async function loadRoutes() {
     document.getElementById('last-updated').textContent =
         `Updated ${new Date().toLocaleTimeString('en-MY')}`;
 
-    // Load predictions for all routes
-    await loadAllPredictions();
+    // Render routes immediately with "Loading..." badges
     renderRoutes(allRoutes);
     spinner.style.display = 'none';
+
+    // Load predictions lazily — one by one, updating cards as results arrive
+    loadPredictionsLazy(allRoutes);
 }
 
-async function loadAllPredictions() {
-    predictions = {};
-    const batch = allRoutes.map(async (route) => {
+async function loadPredictionsLazy(routes) {
+    // Load predictions sequentially so the user sees them appear one at a time
+    for (const route of routes) {
         const data = await apiGet(`/predict?route_id=${route.route_id}`);
         if (data && data.prediction) {
             predictions[route.route_id] = data.prediction;
+            updateRouteCard(route.route_id, data.prediction);
         }
-    });
-    await Promise.allSettled(batch);
+    }
+}
+
+function updateRouteCard(routeId, pred) {
+    // Update a single route card's crowd badge without re-rendering everything
+    const card = document.querySelector(`.route-card[data-route="${routeId}"]`);
+    if (!card) return;
+    const badgeEl = card.querySelector('.crowd-badge');
+    if (!badgeEl) return;
+
+    const level = pred.crowd_level;
+    const cls = crowdClass(level);
+
+    // Update badge content
+    badgeEl.className = `crowd-badge ${cls}`;
+    badgeEl.innerHTML = `<span class="crowd-dot ${cls}"></span> ${crowdEmoji(level)} ${level}`;
 }
 
 function renderRoutes(routes) {
@@ -46,14 +63,11 @@ function renderRoutes(routes) {
     }
 
     list.innerHTML = routes.map(route => {
-        const pred = predictions[route.route_id] || {};
-        const level = pred.crowd_level || '—';
-        const cls = crowdClass(level);
         const color = route.color || '#2196F3';
         const agency = route.agency || '';
 
         return `
-            <div class="route-card" onclick="window.location.href='/route?route_id=${route.route_id}'">
+            <div class="route-card" data-route="${route.route_id}" onclick="window.location.href='/route?route_id=${route.route_id}'">
                 <div class="route-color" style="background: ${color};"></div>
                 <div class="route-info">
                     <div class="route-name">${route.route_name}</div>
@@ -63,12 +77,9 @@ function renderRoutes(routes) {
                     </div>
                 </div>
                 <div class="route-actions">
-                    ${level !== '—' ? `
-                        <span class="crowd-badge ${cls}">
-                            <span class="crowd-dot ${cls}"></span>
-                            ${crowdEmoji(level)} ${level}
-                        </span>
-                    ` : '<span class="crowd-badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">Loading...</span>'}
+                    <span class="crowd-badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">
+                        Loading...
+                    </span>
                     <button class="btn btn-outline btn-small" onclick="event.stopPropagation(); window.location.href='/route?route_id=${route.route_id}'">
                         View →
                     </button>
@@ -81,6 +92,10 @@ function renderRoutes(routes) {
 function searchRoutes(query) {
     if (!query.trim()) {
         renderRoutes(allRoutes);
+        // Re-apply predictions that are already loaded
+        for (const [id, pred] of Object.entries(predictions)) {
+            updateRouteCard(id, pred);
+        }
         return;
     }
     const q = query.toLowerCase();
@@ -90,9 +105,14 @@ function searchRoutes(query) {
         (r.agency || '').toLowerCase().includes(q)
     );
     renderRoutes(filtered);
+    // Re-apply predictions
+    for (const [id, pred] of Object.entries(predictions)) {
+        updateRouteCard(id, pred);
+    }
 }
 
 async function refreshAll() {
+    predictions = {};
     await loadRoutes();
     showToast('Routes refreshed!');
 }
