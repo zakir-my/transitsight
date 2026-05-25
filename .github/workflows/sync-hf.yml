@@ -13,6 +13,11 @@ jobs:
           fetch-depth: 0
 
       - name: Push to HF Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git remote add hf https://zakir-my:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/zakir-my/transitsight
-          git push hf main --force
+          git config --global user.email "zakiryunos@gmail.com"
+          git config --global user.name "Zakir"
+          git remote remove hf 2>/dev/null || true
+          git remote add hf https://zakir-my:$HF_TOKEN@huggingface.co/spaces/zakir-my/transitsight
+          git push hf main --force 2>&1
