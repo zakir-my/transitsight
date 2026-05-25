@@ -12,12 +12,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Push to HF Spaces
+      - name: Push to HF Spaces via API
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          git config --global user.email "zakiryunos@gmail.com"
-          git config --global user.name "Zakir"
-          git remote remove hf 2>/dev/null || true
-          git remote add hf https://zakir-my:$HF_TOKEN@huggingface.co/spaces/zakir-my/transitsight
-          git push hf main --force 2>&1
+        run: pip install huggingface-hub -q && python3 scripts/hf-sync.py
