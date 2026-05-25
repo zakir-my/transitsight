@@ -101,6 +101,7 @@ function renderCrowdDist(dist) {
 function renderApiHealth(services) {
     const container = document.getElementById('api-health');
     container.innerHTML = `
+        <div class="table-wrapper">
         <table class="data-table">
             <thead><tr><th>Service</th><th>Status</th><th>Response Time</th></tr></thead>
             <tbody>
@@ -113,6 +114,7 @@ function renderApiHealth(services) {
                 `).join('')}
             </tbody>
         </table>
+        </div>
     `;
 }
 
@@ -124,6 +126,7 @@ function renderRecentFeedback(feedback) {
     }
 
     container.innerHTML = `
+        <div class="table-wrapper">
         <table class="data-table">
             <thead><tr><th>Route</th><th>Predicted</th><th>Reported</th><th>User</th><th>Time</th></tr></thead>
             <tbody>
@@ -138,6 +141,7 @@ function renderRecentFeedback(feedback) {
                 `).join('')}
             </tbody>
         </table>
+        </div>
     `;
 }
 
@@ -149,6 +153,7 @@ function renderAccuracyChart(data) {
     }
 
     container.innerHTML = `
+        <div class="table-wrapper">
         <table class="data-table">
             <thead><tr><th>Date</th><th>Reports</th><th>Accuracy</th></tr></thead>
             <tbody>
@@ -168,6 +173,7 @@ function renderAccuracyChart(data) {
                 `).join('')}
             </tbody>
         </table>
+        </div>
     `;
 }
 

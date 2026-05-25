@@ -57,6 +57,7 @@ function renderRouteSummaries(routes) {
     }
 
     container.innerHTML = `
+        <div class="table-wrapper">
         <table class="data-table">
             <thead>
                 <tr>
@@ -88,6 +89,7 @@ function renderRouteSummaries(routes) {
                 }).join('')}
             </tbody>
         </table>
+        </div>
     `;
 }
 
@@ -104,6 +106,8 @@ function renderPeakHours(hours) {
     hours.forEach(h => { dataMap[h.hour] = h; });
 
     container.innerHTML = `
+        <div class="peak-chart">
+        <div class="peak-chart-inner">
         <div style="display: flex; align-items: flex-end; gap: 4px; height: 120px; padding: 0 4px; margin-bottom: 8px;">
             ${labels.map(h => {
                 const d = dataMap[h];
@@ -121,6 +125,8 @@ function renderPeakHours(hours) {
         <div style="display: flex; justify-content: space-between; font-size: 0.75em; color: var(--text-secondary); padding: 0 4px;">
             <span>🕐 Hour (24h)</span>
             <span>% Crowded (Medium + Full)</span>
+        </div>
+        </div>
         </div>
     `;
 }
@@ -159,6 +165,7 @@ function renderAccuracyTrend(data) {
     }
 
     container.innerHTML = `
+        <div class="table-wrapper">
         <table class="data-table">
             <thead><tr><th>Date</th><th>Reports</th><th>Accuracy</th></tr></thead>
             <tbody>
@@ -178,6 +185,7 @@ function renderAccuracyTrend(data) {
                 `).join('')}
             </tbody>
         </table>
+        </div>
     `;
 }
 

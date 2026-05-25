@@ -63,3 +63,21 @@ async function apiPost(path, body) {
         return null;
     }
 }
+
+/* Mobile hamburger menu toggle */
+function toggleNav() {
+    const links = document.querySelector('.nav-links');
+    if (links) {
+        links.classList.toggle('open');
+    }
+}
+
+// Close mobile nav when a link is clicked
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.nav-links a')) {
+        const links = document.querySelector('.nav-links');
+        if (links && links.classList.contains('open')) {
+            links.classList.remove('open');
+        }
+    }
+});
