@@ -1,3 +1,12 @@
+---
+title: TransitSight
+emoji: 🚆
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
 # 🚆 TransitSight — Smart Public Transport Crowd Predictor
 
 A web-based smart public transport crowd predictor for Malaysian transit. Integrates **data.gov.my** APIs (GTFS Static, GTFS Realtime, Weather) with **Google AI Studio (Gemini API)** to deliver real-time crowd level predictions for urban commuters.
