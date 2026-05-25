@@ -11,6 +11,10 @@
         <a href="/" class="nav-brand">🚆 Transit<span>Sight</span></a>
         <div class="nav-links">
             <a href="/dashboard" id="back-link">← Back</a>
+            <a href="/dashboard" id="nav-search">🔍 Search</a>
+            <a href="/authority">Authorities</a>
+            <a href="/profile">Profile</a>
+            <a href="/admin">Admin</a>
         </div>
     </nav>
 
@@ -52,6 +56,16 @@
                 </div>
                 <div id="feedback-msg" style="margin-top: 10px; text-align: center; font-size: 0.9em; color: var(--accent);"></div>
                 <div id="streak-msg" style="margin-top: 4px; text-align: center; font-size: 0.8em; color: var(--text-secondary);"></div>
+            </div>
+
+            <!-- Travel Recommendation (UC002) -->
+            <div class="card" id="travel-recommendation-card">
+                <div class="card-title" style="margin-bottom: 10px;">⏱️ Best Time to Travel</div>
+                <div id="travel-recommendation-loading" style="text-align: center; padding: 10px; color: var(--text-secondary); font-size: 0.85em;">Loading recommendation...</div>
+                <div id="travel-recommendation-content" style="display: none;">
+                    <div id="travel-best" style="text-align: center; padding: 12px; background: rgba(0,212,255,0.1); border-radius: 10px; margin-bottom: 12px;"></div>
+                    <div id="travel-slots"></div>
+                </div>
             </div>
 
             <div class="card">

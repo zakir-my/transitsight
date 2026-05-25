@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transit Authority - TransitSight</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-brand">🚆 Transit<span>Sight</span></a>
+        <div class="nav-links">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/dashboard">🔍 Search</a>
+            <a href="/authority" class="active">Authorities</a>
+            <a href="/profile">Profile</a>
+            <a href="/admin">Admin</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card-header" style="margin-bottom: 8px;">
+            <h2>🏛️ Transit Authority Dashboard</h2>
+            <span style="color: var(--text-secondary); font-size: 0.8em;">Public · Read-only analytics</span>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.9em;">
+            Real-time crowd trends, route-level summaries, and peak hour congestion patterns for transit planners.
+        </p>
+
+        <div id="loading-spinner" class="spinner"></div>
+
+        <div id="authority-content" style="display: none;">
+            <!-- Summary stats -->
+            <div class="stats-grid" id="authority-stats"></div>
+
+            <!-- Route-level summaries -->
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 10px;">🚇 Route-Level Crowd Summaries</div>
+                <div id="route-summaries"></div>
+            </div>
+
+            <!-- Peak hour congestion -->
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 10px;">⏰ Peak Hour Congestion (Last 7 Days)</div>
+                <div id="peak-hours"></div>
+            </div>
+
+            <!-- Crowd distribution -->
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 10px;">📊 Crowd Level Distribution</div>
+                <div id="crowd-dist"></div>
+            </div>
+
+            <!-- Accuracy trend -->
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 10px;">📈 Prediction Accuracy Trend</div>
+                <div id="accuracy-trend"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/authority.js"></script>
+</body>
+</html>

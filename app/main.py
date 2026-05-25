@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from app.config import settings
 from app.database import init_db
 from app.services.transit_service import TransitDataService
-from app.routers import prediction, feedback, admin
+from app.routers import prediction, feedback, admin, authority
 import os
 
 app = FastAPI(
@@ -29,6 +29,7 @@ async def startup():
 app.include_router(prediction.router)
 app.include_router(feedback.router)
 app.include_router(admin.router)
+app.include_router(authority.router)
 
 # Serve static frontend files
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
@@ -50,3 +51,11 @@ if os.path.exists(static_dir):
     @app.get("/admin")
     async def serve_admin():
         return FileResponse(os.path.join(static_dir, "admin.html"))
+
+    @app.get("/authority")
+    async def serve_authority():
+        return FileResponse(os.path.join(static_dir, "authority.html"))
+
+    @app.get("/profile")
+    async def serve_profile():
+        return FileResponse(os.path.join(static_dir, "profile.html"))

@@ -39,6 +39,9 @@ async function loadRouteDetail() {
     // Get prediction
     await loadPrediction();
 
+    // Load travel recommendation
+    loadTravelRecommendation(routeId);
+
     // Recent predictions
     renderRecentPredictions(data.recent_predictions || []);
 }
@@ -127,3 +130,68 @@ function renderRecentPredictions(predictions) {
 
 // Load on page ready
 document.addEventListener('DOMContentLoaded', loadRouteDetail);
+
+
+async function loadTravelRecommendation(routeId) {
+    const loading = document.getElementById('travel-recommendation-loading');
+    const content = document.getElementById('travel-recommendation-content');
+    const bestEl = document.getElementById('travel-best');
+    const slotsEl = document.getElementById('travel-slots');
+    if (!loading || !content) return;
+
+    const data = await apiGet(`/recommend?route_id=${routeId}`);
+    if (!data || !data.recommendation) {
+        loading.textContent = 'Recommendation unavailable.';
+        return;
+    }
+
+    loading.style.display = 'none';
+    content.style.display = 'block';
+
+    // Best slot
+    const best = data.recommendation;
+    const emoji = crowdEmoji(best.crowd_level);
+    const cls = crowdClass(best.crowd_level);
+    const slotLabels = {
+        'morning': '🌅 Morning (7:30 AM)',
+        'midday': '☀️ Midday (12:30 PM)',
+        'afternoon': '🌤️ Afternoon (3:00 PM)',
+        'evening': '🌆 Evening (6:00 PM)',
+        'late_night': '🌙 Late Night (9:30 PM)',
+    };
+    bestEl.innerHTML = `
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 6px;">🌟 Recommended Time</div>
+        <div style="font-size: 1.3em; font-weight: 700; color: var(--accent);">
+            ${slotLabels[best.slot] || best.time}
+        </div>
+        <div style="margin-top: 6px;">
+            <span class="crowd-badge ${cls}" style="font-size: 1em; padding: 4px 16px;">
+                ${emoji} ${best.crowd_level}
+            </span>
+        </div>
+    `;
+
+    // All slots
+    const levelOrder = { 'Low': 0, 'Medium': 1, 'Full': 2 };
+    const sorted = [...data.time_slots].sort((a, b) => levelOrder[a.crowd_level] - levelOrder[b.crowd_level]);
+
+    slotsEl.innerHTML = sorted.map(s => {
+        const scls = crowdClass(s.crowd_level);
+        const semoji = crowdEmoji(s.crowd_level);
+        const isBest = s.slot === best.slot;
+        return `
+            <div style="display: flex; justify-content: space-between; align-items: center;
+                        padding: 8px 12px; margin-bottom: 4px; border-radius: 8px;
+                        background: ${isBest ? 'rgba(0,212,255,0.08)' : 'transparent'};
+                        border: ${isBest ? '1px solid rgba(0,212,255,0.3)' : '1px solid transparent'};">
+                <span style="font-weight: ${isBest ? '700' : '400'};">
+                    ${slotLabels[s.slot] || s.time}
+                    ${isBest ? '<span style="color: var(--accent); margin-left: 6px; font-size: 0.8em;">★ Best</span>' : ''}
+                </span>
+                <span class="crowd-badge ${scls}" style="font-size: 0.8em;">
+                    ${semoji} ${s.crowd_level}
+                </span>
+            </div>
+        `;
+    }).join('');
+}

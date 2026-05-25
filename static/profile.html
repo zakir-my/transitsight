@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - TransitSight</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-brand">🚆 Transit<span>Sight</span></a>
+        <div class="nav-links">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/dashboard">🔍 Search</a>
+            <a href="/authority">Authorities</a>
+            <a href="/profile" class="active">Profile</a>
+            <a href="/admin">Admin</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="loading-spinner" class="spinner"></div>
+
+        <div id="profile-content" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2>👤 My Profile</h2>
+                </div>
+                <div id="profile-stats" class="stats-grid"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 10px;">📋 My Feedback History</div>
+                <div id="feedback-history"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/profile.js"></script>
+</body>
+</html>
