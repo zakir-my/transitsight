@@ -13,12 +13,10 @@ class TransitDataService:
     """Handles all data.gov.my GTFS API interactions."""
 
     GTFS_AGENCIES = {
-        "ktmb": "Keretapi Tanah Melayu (KTMB)",
-        "prasarana_rail": "Rapid KL (Prasarana) - Rail",
-        "prasarana_bus": "Rapid KL (Prasarana) - Bus",
-        "rapid_bus_penang": "Rapid Penang",
-        "mybas_ipoh": "MyBAS Ipoh",
-        "mybas_johor": "MyBAS Johor",
+        "ktmb": {"name": "Keretapi Tanah Melayu (KTMB)", "category": None},
+        "prasarana": {"name": "Rapid KL (Prasarana)", "categories": [
+            "rapid-rail-kl",     # LRT, MRT, Monorail
+        ]},
     }
 
     @staticmethod
@@ -106,12 +104,16 @@ class TransitDataService:
     @staticmethod
     def clean_route_name(raw_name, route_type):
         """Strip redundant prefixes — the type badge already shows the category."""
-        # GTFS route_type: 0=light rail/tram, 1=subway, 2=rail, 3=bus
         prefixes = [
+            # KTMB
             "Electric Train Service ", "Intercity Ekspres Rakyat Timuran ",
             "Intercity Ekspres Selatan ", "Intercity Shuttle Tebrau ",
             "Intercity Shuttle ", "Intercity ", "KTM Komuter ",
-            "KTM ", "Rapid KL ",
+            "KTM ",
+            # Rapid KL
+            "Rapid KL ", "KL ",
+            # Generic transit type prefixes (if name starts with them)
+            "LRT ", "MRT ",
         ]
         for p in prefixes:
             if raw_name.startswith(p):
@@ -130,43 +132,45 @@ class TransitDataService:
             routes_seeded = 0
             stops_seeded = 0
 
-            # Try fetching live GTFS data for Rapid KL rail
+            # Try fetching live GTFS data for each agency
             print("  [transit] Attempting to fetch live GTFS data from data.gov.my...")
-            for agency_key in ["prasarana_rail", "ktmb"]:
-                try:
-                    gtfs = TransitDataService.fetch_static_gtfs(agency_key)
-                    if "error" not in gtfs and "routes" in gtfs and gtfs["routes"]:
-                        for r in gtfs["routes"][:50]:
-                            rid = r.get("route_id", "")
-                            rname = r.get("route_long_name") or r.get("route_short_name", "")
-                            if not rname:
-                                continue
-                            rt = r.get("route_type", "")
-                            rname = TransitDataService.clean_route_name(rname, rt)
-                            conn.execute(
-                                "INSERT OR IGNORE INTO routes (route_id, route_name, agency, color, route_type) VALUES (?, ?, ?, ?, ?)",
-                                (rid, rname, gtfs.get("agency", [{}])[0].get("agency_name", agency_key) if gtfs.get("agency") else agency_key,
-                                 r.get("route_color", "#3b82f6") if r.get("route_color") else "#3b82f6",
-                                 r.get("route_type", "")),
-                            )
-                            routes_seeded += 1
+            for agency_key, agency_info in TransitDataService.GTFS_AGENCIES.items():
+                categories = agency_info.get("categories") or [None]
+                for cat in categories:
+                    try:
+                        gtfs = TransitDataService.fetch_static_gtfs(agency_key, category=cat)
+                        if "error" not in gtfs and "routes" in gtfs and gtfs["routes"]:
+                            agency_name = agency_info["name"]
+                            for r in gtfs["routes"][:80]:
+                                rid = r.get("route_id", "")
+                                rname = r.get("route_long_name") or r.get("route_short_name", "")
+                                if not rname:
+                                    continue
+                                rt = r.get("route_type", "")
+                                rname = TransitDataService.clean_route_name(rname, rt)
+                                conn.execute(
+                                    "INSERT OR IGNORE INTO routes (route_id, route_name, agency, color, route_type) VALUES (?, ?, ?, ?, ?)",
+                                    (rid, rname, agency_name,
+                                     f"#{r['route_color']}" if r.get("route_color") else "#3b82f6",
+                                     rt),
+                                )
+                                routes_seeded += 1
 
-                        # Seed stops
-                        for s in gtfs.get("stops", [])[:100]:
-                            sid = s.get("stop_id", "")
-                            sname = s.get("stop_name", "")
-                            if not sname:
-                                continue
-                            conn.execute(
-                                "INSERT OR IGNORE INTO stops (stop_id, stop_name, stop_lat, stop_lon) VALUES (?, ?, ?, ?)",
-                                (sid, sname,
-                                 float(s.get("stop_lat", 0)) if s.get("stop_lat") else None,
-                                 float(s.get("stop_lon", 0)) if s.get("stop_lon") else None),
-                            )
-                            stops_seeded += 1
-                        print(f"  [transit] Seeded {routes_seeded} routes and {stops_seeded} stops from {agency_key}")
-                except Exception as e:
-                    print(f"  [transit] GTFS fetch failed for {agency_key}: {e}")
+                            for s in gtfs.get("stops", [])[:100]:
+                                sid = s.get("stop_id", "")
+                                sname = s.get("stop_name", "")
+                                if not sname:
+                                    continue
+                                conn.execute(
+                                    "INSERT OR IGNORE INTO stops (stop_id, stop_name, stop_lat, stop_lon) VALUES (?, ?, ?, ?)",
+                                    (sid, sname,
+                                     float(s.get("stop_lat", 0)) if s.get("stop_lat") else None,
+                                     float(s.get("stop_lon", 0)) if s.get("stop_lon") else None),
+                                )
+                                stops_seeded += 1
+                            print(f"  [transit] Seeded {routes_seeded} routes and {stops_seeded} stops from {agency_key}/{cat}")
+                    except Exception as e:
+                        print(f"  [transit] GTFS fetch failed for {agency_key}/{cat}: {e}")
 
             # Fall back to hardcoded defaults if nothing was fetched
             if routes_seeded == 0:

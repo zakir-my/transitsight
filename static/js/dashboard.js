@@ -2,6 +2,7 @@
 
 let allRoutes = [];
 let predictions = {};
+let activeFilter = 'all';
 
 async function loadRoutes() {
     const skeleton = document.getElementById('loading-skeleton');
@@ -22,10 +23,56 @@ async function loadRoutes() {
     document.getElementById('last-updated').textContent =
         `Updated ${new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}`;
 
-    renderRoutes(allRoutes);
+    buildFilterTabs();
+    applyFilter();
     skeleton.style.display = 'none';
 
     loadPredictionsLazy(allRoutes);
+}
+
+function buildFilterTabs() {
+    // Dynamically build filter tabs from actual route types in the data
+    const types = new Set();
+    allRoutes.forEach(r => types.add(getRouteType(r)));
+    const sorted = [...types].sort();
+
+    const container = document.getElementById('filter-tabs');
+    container.innerHTML = '<button class="filter-tab active" data-filter="all">All Lines</button>';
+    sorted.forEach(type => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-tab';
+        btn.dataset.filter = type;
+        btn.textContent = type;
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            activeFilter = this.dataset.filter;
+            applyFilter();
+        });
+        container.appendChild(btn);
+    });
+}
+
+function getRouteType(route) {
+    const rid = route.route_id;
+    const rt = route.route_type;
+    const agency = (route.agency || '').toLowerCase();
+
+    // Prasarana Rapid KL rail
+    if (agency.includes('prasarana') || agency.includes('rapid kl')) {
+        if (rid === 'MR' || rid.startsWith('MR')) return 'Monorail';
+        if (rid === 'BRT' || rid.startsWith('BRT')) return 'BRT';
+        if (rid.startsWith('KJ') || rid.startsWith('AG') || rid.startsWith('PH')) return 'LRT';
+        if (rid.startsWith('KG') || rid.startsWith('PY')) return 'MRT';
+        // GTFS type: 0=light rail, 1=subway
+        if (rt === '0') return 'BRT';
+        if (rt === '1') return 'LRT';
+        return 'Transit';
+    }
+
+    // KTMB
+    return 'KTM';
 }
 
 async function loadPredictionsLazy(routes) {
@@ -90,6 +137,7 @@ function renderRoutes(routes) {
 
     list.innerHTML = routes.map(route => {
         const color = route.color || '#3b82f6';
+        const routeType = getRouteType(route);
         const agency = route.agency || '';
 
         return `
@@ -103,6 +151,7 @@ function renderRoutes(routes) {
                                 <span class="route-code" style="color: ${color}; background: ${color}15; border: 1px solid ${color}30;">
                                     ${route.route_id}
                                 </span>
+                                <span class="route-type-badge">${routeType}</span>
                             </div>
                             <div class="route-name">${route.route_name}</div>
                         </div>
@@ -153,16 +202,28 @@ function updateRouteCardError(routeId) {
     }
 }
 
+function applyFilter() {
+    let filtered = allRoutes;
+    if (activeFilter !== 'all') {
+        filtered = allRoutes.filter(r => getRouteType(r) === activeFilter);
+    }
+    renderRoutes(filtered);
+    for (const [id, pred] of Object.entries(predictions)) {
+        updateRouteCard(id, pred);
+    }
+}
+
 function searchRoutes(query) {
     if (!query.trim()) {
-        renderRoutes(allRoutes);
-        for (const [id, pred] of Object.entries(predictions)) {
-            updateRouteCard(id, pred);
-        }
+        applyFilter();
         return;
     }
+    let filtered = allRoutes;
+    if (activeFilter !== 'all') {
+        filtered = filtered.filter(r => getRouteType(r) === activeFilter);
+    }
     const q = query.toLowerCase();
-    const filtered = allRoutes.filter(r =>
+    filtered = filtered.filter(r =>
         r.route_name.toLowerCase().includes(q) ||
         r.route_id.toLowerCase().includes(q) ||
         (r.agency || '').toLowerCase().includes(q)
