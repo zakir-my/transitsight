@@ -2,7 +2,6 @@
 
 let allRoutes = [];
 let predictions = {};
-let activeFilter = 'all';
 
 async function loadRoutes() {
     const skeleton = document.getElementById('loading-skeleton');
@@ -23,10 +22,9 @@ async function loadRoutes() {
     document.getElementById('last-updated').textContent =
         `Updated ${new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}`;
 
-    applyFilter();
+    renderRoutes(allRoutes);
     skeleton.style.display = 'none';
 
-    // Load predictions lazily, one by one
     loadPredictionsLazy(allRoutes);
 }
 
@@ -37,7 +35,6 @@ async function loadPredictionsLazy(routes) {
             predictions[route.route_id] = data.prediction;
             updateRouteCard(route.route_id, data.prediction);
         } else {
-            // Show unavailable state
             updateRouteCardError(route.route_id);
         }
     }
@@ -55,18 +52,15 @@ function updateRouteCard(routeId, pred) {
     const timeLabel = formatTimeLabel(pred.time_context);
     const dayLabel = pred.day_context || '';
 
-    // Map crowd level to density percentage for the bar
     const densityMap = { 'Low': 25, 'Medium': 55, 'Full': 88 };
     const densityPct = densityMap[level] || 50;
 
-    // Update status badge
     const badgeEl = card.querySelector('.route-status-badge');
     if (badgeEl) {
         badgeEl.className = `route-status-badge badge-${cls}`;
         badgeEl.textContent = level;
     }
 
-    // Replace loading placeholder with full prediction
     const predEl = card.querySelector('.route-prediction');
     if (!predEl) return;
 
@@ -90,17 +84,16 @@ function updateRouteCard(routeId, pred) {
 function renderRoutes(routes) {
     const list = document.getElementById('route-list');
     if (routes.length === 0) {
-        list.innerHTML = '<div class="empty-state">No routes found matching your filter.</div>';
+        list.innerHTML = '<div class="empty-state">No routes found.</div>';
         return;
     }
 
     list.innerHTML = routes.map(route => {
         const color = route.color || '#3b82f6';
-        const routeType = getRouteType(route.route_id, route.route_type);
         const agency = route.agency || '';
 
         return `
-            <div class="route-card" data-route="${route.route_id}" data-type="${routeType}"
+            <div class="route-card" data-route="${route.route_id}"
                  onclick="window.location.href='/route?route_id=${route.route_id}'">
                 <div class="route-card-color" style="background: ${color};"></div>
                 <div class="route-card-body">
@@ -110,7 +103,6 @@ function renderRoutes(routes) {
                                 <span class="route-code" style="color: ${color}; background: ${color}15; border: 1px solid ${color}30;">
                                     ${route.route_id}
                                 </span>
-                                <span class="route-type-badge">${routeType}</span>
                             </div>
                             <div class="route-name">${route.route_name}</div>
                         </div>
@@ -131,26 +123,6 @@ function renderRoutes(routes) {
             </div>
         `;
     }).join('');
-}
-
-function getRouteType(routeId, routeType) {
-    // Use GTFS route_type: 0=light rail, 1=subway, 2=rail
-    // But KTMB classifies komuter as type=0 — treat KTMB routes as 'KTM'
-    const ktmPrefixes = ['KC', 'KA', 'KB', 'ETS', 'ES', 'ERT', 'SH', 'ST', 'EP', 'EG', '100'];
-    const isKTM = ktmPrefixes.some(p => routeId.startsWith(p));
-
-    if (isKTM) return 'KTM';
-    if (routeId.startsWith('KJL')) return 'LRT';
-    if (routeId.startsWith('MRT') || routeId.startsWith('KG') || routeId.startsWith('PY')) return 'MRT';
-    if (routeId.startsWith('MON') || routeId.startsWith('MR')) return 'Monorail';
-    if (routeId.startsWith('BRT') || routeId.startsWith('SJ')) return 'BRT';
-
-    // GTFS type fallback
-    if (routeType !== undefined && routeType !== null && routeType !== '') {
-        const map = { '0': 'LRT', '1': 'MRT', '2': 'KTM', '3': 'Bus' };
-        if (map[String(routeType)]) return map[String(routeType)];
-    }
-    return 'Transit';
 }
 
 function formatTimeLabel(timeStr) {
@@ -181,41 +153,16 @@ function updateRouteCardError(routeId) {
     }
 }
 
-/* ---- Filter tabs ---- */
-function applyFilter() {
-    let filtered = allRoutes;
-    if (activeFilter !== 'all') {
-        filtered = allRoutes.filter(r => getRouteType(r.route_id, r.route_type) === activeFilter);
-    }
-    renderRoutes(filtered);
-    // Re-apply loaded predictions
-    for (const [id, pred] of Object.entries(predictions)) {
-        updateRouteCard(id, pred);
-    }
-}
-
-document.querySelectorAll('.filter-tab').forEach(tab => {
-    tab.addEventListener('click', function(e) {
-        e.stopPropagation();
-        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-        activeFilter = this.dataset.filter;
-        applyFilter();
-    });
-});
-
-/* ---- Search ---- */
 function searchRoutes(query) {
     if (!query.trim()) {
-        applyFilter();
+        renderRoutes(allRoutes);
+        for (const [id, pred] of Object.entries(predictions)) {
+            updateRouteCard(id, pred);
+        }
         return;
     }
-    let filtered = allRoutes;
-    if (activeFilter !== 'all') {
-        filtered = filtered.filter(r => getRouteType(r.route_id, r.route_type) === activeFilter);
-    }
     const q = query.toLowerCase();
-    filtered = filtered.filter(r =>
+    const filtered = allRoutes.filter(r =>
         r.route_name.toLowerCase().includes(q) ||
         r.route_id.toLowerCase().includes(q) ||
         (r.agency || '').toLowerCase().includes(q)
@@ -226,7 +173,6 @@ function searchRoutes(query) {
     }
 }
 
-/* ---- Refresh ---- */
 async function refreshAll() {
     predictions = {};
     document.querySelectorAll('.route-status-badge').forEach(b => {
