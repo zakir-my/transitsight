@@ -98,6 +98,12 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS system_config (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             -- Insert default admin user
             INSERT OR IGNORE INTO users (user_id, name, email, role)
             VALUES ('admin', 'Admin', 'admin@transitsight.my', 'admin');

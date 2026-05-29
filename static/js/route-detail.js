@@ -91,13 +91,15 @@ async function submitFeedback(level) {
 
     if (result && result.status === 'submitted') {
         document.getElementById('feedback-msg').textContent = result.message || 'Thank you! 🎉';
-        showToast('✅ Feedback submitted! Thank you for helping improve predictions.');
+        const streakMsg = result.streak > 0
+            ? `✅ Thanks! Streak: ${result.streak} 🔥 (${result.total_feedback} total)`
+            : '✅ Feedback submitted! Thank you for helping improve predictions.';
+        showToast(streakMsg);
 
-        // Show streak
-        const streakData = await apiGet(`/feedback/user/${userId}`);
-        if (streakData) {
-            document.getElementById('streak-msg').textContent =
-                `🔥 You've submitted feedback! Keep going to build your streak.`;
+        // Update streak display
+        const streakEl = document.getElementById('streak-msg');
+        if (streakEl && result.streak > 0) {
+            streakEl.textContent = `🔥 ${result.streak}-day streak · ${result.total_feedback} reports total`;
         }
     } else {
         showToast('Failed to submit feedback. Try again.');

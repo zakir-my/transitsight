@@ -105,14 +105,58 @@ class TransitDataService:
 
     @staticmethod
     def seed_default_routes():
-        """Seed default routes into database if empty."""
+        """Seed routes from GTFS API with hardcoded fallback."""
         from app.database import get_db
         with get_db() as conn:
             count = conn.execute("SELECT COUNT(*) FROM routes").fetchone()[0]
-            if count == 0:
+            if count > 0:
+                return  # Already seeded
+
+            routes_seeded = 0
+            stops_seeded = 0
+
+            # Try fetching live GTFS data for Rapid KL rail
+            print("  [transit] Attempting to fetch live GTFS data from data.gov.my...")
+            for agency_key in ["prasarana_rail", "ktmb"]:
+                try:
+                    gtfs = TransitDataService.fetch_static_gtfs(agency_key)
+                    if "error" not in gtfs and "routes" in gtfs and gtfs["routes"]:
+                        for r in gtfs["routes"][:50]:
+                            rid = r.get("route_id", "")
+                            rname = r.get("route_long_name") or r.get("route_short_name", "")
+                            if not rname:
+                                continue
+                            conn.execute(
+                                "INSERT OR IGNORE INTO routes (route_id, route_name, agency, color, route_type) VALUES (?, ?, ?, ?, ?)",
+                                (rid, rname, gtfs.get("agency", [{}])[0].get("agency_name", agency_key) if gtfs.get("agency") else agency_key,
+                                 r.get("route_color", "#3b82f6") if r.get("route_color") else "#3b82f6",
+                                 r.get("route_type", "")),
+                            )
+                            routes_seeded += 1
+
+                        # Seed stops
+                        for s in gtfs.get("stops", [])[:100]:
+                            sid = s.get("stop_id", "")
+                            sname = s.get("stop_name", "")
+                            if not sname:
+                                continue
+                            conn.execute(
+                                "INSERT OR IGNORE INTO stops (stop_id, stop_name, stop_lat, stop_lon) VALUES (?, ?, ?, ?)",
+                                (sid, sname,
+                                 float(s.get("stop_lat", 0)) if s.get("stop_lat") else None,
+                                 float(s.get("stop_lon", 0)) if s.get("stop_lon") else None),
+                            )
+                            stops_seeded += 1
+                        print(f"  [transit] Seeded {routes_seeded} routes and {stops_seeded} stops from {agency_key}")
+                except Exception as e:
+                    print(f"  [transit] GTFS fetch failed for {agency_key}: {e}")
+
+            # Fall back to hardcoded defaults if nothing was fetched
+            if routes_seeded == 0:
+                print("  [transit] GTFS unavailable, seeding default routes")
                 for r in TransitDataService.get_default_routes():
                     conn.execute(
                         "INSERT OR IGNORE INTO routes (route_id, route_name, agency, color) VALUES (?, ?, ?, ?)",
                         (r["route_id"], r["route_name"], r["agency"], r["color"]),
                     )
-                print(f"Seeded {len(TransitDataService.get_default_routes())} default routes.")
+                print(f"  [transit] Seeded {len(TransitDataService.get_default_routes())} default routes.")

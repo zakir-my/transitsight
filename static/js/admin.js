@@ -11,6 +11,7 @@ function adminLogin() {
 }
 
 async function fetchAdminData() {
+    loadConfig();
     const resp = await fetch('/api/admin/dashboard', {
         headers: { 'Authorization': authToken }
     });
@@ -199,6 +200,56 @@ function renderAccuracyChart(data) {
 function refreshAdmin() {
     fetchAdminData();
     showToast('Admin dashboard refreshed!');
+}
+
+/* ---- Config management (UC005) ---- */
+async function loadConfig() {
+    const data = await apiGet('/admin/config');
+    if (!data) return;
+
+    // Pre-fill form with stored overrides or env defaults
+    const cfg = data.config || {};
+    const env = data.env_defaults || {};
+
+    document.getElementById('cfg-gemini-model').value =
+        cfg.gemini_model?.value || env.gemini_model || 'gemini-2.0-flash';
+
+    document.getElementById('cfg-key-status').textContent =
+        env.gemini_key_configured ? 'Configured ✓' : 'Not set ⚠️';
+    document.getElementById('cfg-key-status').style.color =
+        env.gemini_key_configured ? 'var(--crowd-low)' : 'var(--crowd-full)';
+}
+
+async function saveConfig() {
+    const model = document.getElementById('cfg-gemini-model').value.trim();
+    const pass = document.getElementById('cfg-admin-pass').value.trim();
+    const status = document.getElementById('config-status');
+
+    if (!model && !pass) {
+        status.textContent = 'No changes to save';
+        status.style.color = 'var(--text-muted)';
+        return;
+    }
+
+    const updates = [];
+    if (model) {
+        const r = await apiPost('/admin/config', { key: 'gemini_model', value: model });
+        if (r) updates.push('model');
+    }
+    if (pass) {
+        const r = await apiPost('/admin/config', { key: 'admin_password', value: pass });
+        if (r) updates.push('password');
+        document.getElementById('cfg-admin-pass').value = '';
+    }
+
+    if (updates.length > 0) {
+        status.textContent = `Saved: ${updates.join(', ')} ✓`;
+        status.style.color = 'var(--crowd-low)';
+    } else {
+        status.textContent = 'Save failed';
+        status.style.color = 'var(--crowd-full)';
+    }
+    setTimeout(() => { status.textContent = ''; }, 4000);
 }
 
 // Allow Enter key to login

@@ -44,12 +44,35 @@
 
             <div class="stats-grid" id="admin-stats"></div>
 
-            <div class="card">
+            <div class="glass-card" style="margin-bottom: 12px;">
+                <div class="card-title" style="margin-bottom: 12px;"><i data-lucide="settings" class="lucide-sm"></i> System Configuration</div>
+                <div id="config-form">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 0.72em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Gemini Model</label>
+                            <input type="text" id="cfg-gemini-model" style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: var(--bg-input); color: var(--text); font-family: var(--font-mono); font-size: 0.85em; outline: none; margin-top: 4px;" placeholder="gemini-2.0-flash">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.72em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Admin Password</label>
+                            <input type="password" id="cfg-admin-pass" style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: var(--bg-input); color: var(--text); font-family: var(--font-mono); font-size: 0.85em; outline: none; margin-top: 4px;" placeholder="••••••••">
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                        <button class="btn btn-primary btn-small" onclick="saveConfig()"><i data-lucide="save" class="lucide-xs"></i> Save Settings</button>
+                        <span id="config-status" style="font-size: 0.78em; color: var(--crowd-low);"></span>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.72em; color: var(--text-muted);">
+                    Gemini API key: <span id="cfg-key-status">checking...</span>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-bottom: 12px;">
                 <div class="card-title" style="margin-bottom: 10px;">📊 Crowd Level Distribution</div>
                 <div id="crowd-dist"></div>
             </div>
 
-            <div class="card">
+            <div class="glass-card" style="margin-bottom: 12px;">
                 <div class="card-title" style="margin-bottom: 10px;">🔌 API Health</div>
                 <div id="api-health"></div>
             </div>

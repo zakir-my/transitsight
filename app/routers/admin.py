@@ -161,3 +161,42 @@ async def debug_config(auth=Depends(verify_admin)):
         "app_directory": str(Path(__file__).parent.parent),
         "python_version": sys.version,
     }
+
+
+class ConfigUpdate(BaseModel):
+    key: str
+    value: str
+
+
+@router.get("/config")
+async def get_config(auth=Depends(verify_admin)):
+    """Get all system configuration settings."""
+    from app.database import get_db
+    with get_db() as conn:
+        rows = conn.execute("SELECT key, value, updated_at FROM system_config ORDER BY key").fetchall()
+        config = {r["key"]: {"value": r["value"], "updated_at": r["updated_at"]} for r in rows}
+
+    # Merge with env defaults
+    return {
+        "config": config,
+        "env_defaults": {
+            "gemini_model": settings.GEMINI_MODEL,
+            "gemini_key_configured": bool(settings.GEMINI_API_KEY),
+            "admin_username": settings.ADMIN_USERNAME,
+        },
+    }
+
+
+@router.post("/config")
+async def update_config(body: ConfigUpdate, auth=Depends(verify_admin)):
+    """Update a system configuration setting."""
+    from app.database import get_db
+    valid_keys = {"gemini_model", "admin_username", "admin_password"}
+    if body.key not in valid_keys:
+        raise HTTPException(status_code=400, detail=f"Invalid config key. Allowed: {', '.join(sorted(valid_keys))}")
+    with get_db() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO system_config (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
+            (body.key, body.value),
+        )
+    return {"status": "saved", "key": body.key, "value": body.value[:20] + "..." if len(body.value) > 20 else body.value}

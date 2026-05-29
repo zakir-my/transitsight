@@ -36,10 +36,20 @@ class FeedbackService:
                     (user_id,),
                 )
 
+            # Get streak for gamification
+            streak_row = conn.execute(
+                "SELECT feedback_count, streak FROM users WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+            streak = streak_row["streak"] if streak_row else 0
+            total = streak_row["feedback_count"] if streak_row else 0
+
             return {
                 "status": "submitted",
                 "feedback_id": cursor.lastrowid,
-                "message": "Thank you for helping improve TransitSight predictions! 🎉",
+                "streak": streak,
+                "total_feedback": total,
+                "message": f"Thanks! You've submitted {total} report{'s' if total != 1 else ''}. Streak: {streak} 🔥",
             }
 
     @staticmethod

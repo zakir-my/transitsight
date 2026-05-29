@@ -36,6 +36,9 @@ async function loadPredictionsLazy(routes) {
         if (data && data.prediction) {
             predictions[route.route_id] = data.prediction;
             updateRouteCard(route.route_id, data.prediction);
+        } else {
+            // Show unavailable state
+            updateRouteCardError(route.route_id);
         }
     }
 }
@@ -148,6 +151,23 @@ function formatTimeLabel(timeStr) {
     if (h < 17) return 'Afternoon';
     if (h < 20) return 'Evening';
     return 'Night';
+}
+
+function updateRouteCardError(routeId) {
+    const card = document.querySelector(`.route-card[data-route="${routeId}"]`);
+    if (!card) return;
+    const badgeEl = card.querySelector('.route-status-badge');
+    if (badgeEl) {
+        badgeEl.textContent = '—';
+    }
+    const predEl = card.querySelector('.route-prediction');
+    if (predEl) {
+        predEl.innerHTML = `
+            <div style="padding: 10px 0; color: var(--text-muted); font-size: 0.78em;">
+                Prediction unavailable — try refreshing
+            </div>
+        `;
+    }
 }
 
 /* ---- Filter tabs ---- */
