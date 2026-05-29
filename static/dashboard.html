@@ -62,9 +62,20 @@
 
     <div id="toast" class="toast"></div>
 
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
     <script src="/static/js/main.js"></script>
     <script src="/static/js/dashboard.js"></script>
-    <script>lucide.createIcons();</script>
+    <script>
+        lucide.createIcons();
+        // Safety fallback: if routes don't load in 8s, show a visible error
+        setTimeout(function() {
+            var list = document.getElementById('route-list');
+            var skel = document.getElementById('loading-skeleton');
+            if (list && list.innerHTML.trim() === '' && skel && skel.style.display !== 'none') {
+                skel.style.display = 'none';
+                list.innerHTML = '<div class="empty-state">Routes took too long to load.<br><small>Check your connection or try refreshing the page.</small></div>';
+            }
+        }, 8000);
+    </script>
 </body>
 </html>
