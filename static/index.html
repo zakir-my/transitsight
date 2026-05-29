@@ -85,7 +85,7 @@
             .then(r => r.json())
             .then(d => document.getElementById('route-count').textContent = d.routes.length)
             .catch(() => document.getElementById('route-count').textContent = '—');
-        fetch('/api/predict?route_id=KJL001')
+        fetch('/api/predict?route_id=KJ')
             .then(r => r.json())
             .then(() => document.getElementById('prediction-count').textContent = 'Live')
             .catch(() => {});

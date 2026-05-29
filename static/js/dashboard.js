@@ -36,13 +36,7 @@ function buildFilterTabs() {
     allRoutes.forEach(r => types.add(getRouteType(r)));
     const sorted = [...types].sort();
 
-    const container = document.getElementById('filter-tabs');
-    container.innerHTML = '<button class="filter-tab active" data-filter="all">All Lines</button>';
-    sorted.forEach(type => {
-        const btn = document.createElement('button');
-        btn.className = 'filter-tab';
-        btn.dataset.filter = type;
-        btn.textContent = type;
+    function makeFilterHandler(btn) {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
@@ -50,6 +44,23 @@ function buildFilterTabs() {
             activeFilter = this.dataset.filter;
             applyFilter();
         });
+    }
+
+    const container = document.getElementById('filter-tabs');
+    container.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className = 'filter-tab active';
+    allBtn.dataset.filter = 'all';
+    allBtn.textContent = 'All Lines';
+    makeFilterHandler(allBtn);
+    container.appendChild(allBtn);
+
+    sorted.forEach(type => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-tab';
+        btn.dataset.filter = type;
+        btn.textContent = type;
+        makeFilterHandler(btn);
         container.appendChild(btn);
     });
 }
