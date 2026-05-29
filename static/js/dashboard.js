@@ -12,22 +12,34 @@ async function loadRoutes() {
     skeleton.style.display = 'grid';
     list.innerHTML = '';
 
-    const data = await apiGet('/routes');
-    if (!data || !data.routes) {
+    // Debug: check if apiGet exists
+    if (typeof apiGet !== 'function') {
         skeleton.style.display = 'none';
-        list.innerHTML = '<div class="empty-state">Failed to load routes. Check server status.</div>';
+        list.innerHTML = '<div class="empty-state">Error: apiGet not defined. main.js may have failed to load.</div><div style="font-size:0.7em;color:var(--text-muted);margin-top:8px;" id="debug-info"></div>';
         return;
     }
 
-    allRoutes = data.routes;
-    document.getElementById('last-updated').textContent =
-        `Updated ${new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}`;
+    try {
+        const data = await apiGet('/routes');
+        if (!data || !data.routes) {
+            skeleton.style.display = 'none';
+            list.innerHTML = '<div class="empty-state">Failed to load routes. Check server status.</div><div style="font-size:0.7em;color:var(--text-muted);margin-top:8px;" id="debug-info">Response: ' + JSON.stringify(data).substring(0, 200) + '</div>';
+            return;
+        }
 
-    buildFilterTabs();
-    applyFilter();
-    skeleton.style.display = 'none';
+        allRoutes = data.routes;
+        document.getElementById('last-updated').textContent =
+            `Updated ${new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}`;
 
-    loadPredictionsLazy(allRoutes);
+        buildFilterTabs();
+        applyFilter();
+        skeleton.style.display = 'none';
+
+        loadPredictionsLazy(allRoutes);
+    } catch (err) {
+        skeleton.style.display = 'none';
+        list.innerHTML = '<div class="empty-state">JS Error: ' + err.message + '</div><div style="font-size:0.7em;color:var(--text-muted);margin-top:8px;" id="debug-info">Stack: ' + (err.stack || 'none').substring(0, 300) + '</div>';
+    }
 }
 
 function buildFilterTabs() {
