@@ -4,15 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - TransitSight</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <nav class="navbar">
-        <a href="/" class="nav-brand">🚆 Transit<span>Sight</span></a>
-        <button class="nav-toggle" onclick="toggleNav()">☰</button>
+        <a href="/" class="nav-brand">
+            <div class="nav-brand-icon"><i data-lucide="train-front" class="lucide-brand"></i></div>
+            <div>Transit<span>Sight</span></div>
+        </a>
+        <button class="nav-toggle" onclick="toggleNav()"><i data-lucide="menu"></i></button>
         <div class="nav-links">
             <a href="/dashboard" class="active">Dashboard</a>
-            <a href="/dashboard">🔍 Search</a>
             <a href="/authority">Authorities</a>
             <a href="/profile">Profile</a>
             <a href="/admin">Admin</a>
@@ -20,26 +25,51 @@
     </nav>
 
     <div class="container">
-        <div class="card-header" style="margin-bottom: 8px;">
-            <h2>🚇 Live Transit Dashboard</h2>
-            <span id="last-updated" style="color: var(--text-secondary); font-size: 0.8em;"></span>
+        <div class="page-header">
+            <div>
+                <h2>Transit Fleet Dashboard</h2>
+                <p>Real-time crowd predictions for all KL transit lines</p>
+            </div>
+            <div class="page-header-actions">
+                <span class="update-badge" id="last-updated"></span>
+                <button class="btn btn-outline" onclick="refreshAll()"><i data-lucide="refresh-cw" class="lucide-sm"></i> Refresh</button>
+            </div>
         </div>
-        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.9em;">
-            Select a route to view AI-powered crowd predictions and submit feedback.
-        </p>
+
+        <div class="filter-tabs" id="filter-tabs">
+            <button class="filter-tab active" data-filter="all">All Lines</button>
+            <button class="filter-tab" data-filter="LRT">LRT</button>
+            <button class="filter-tab" data-filter="MRT">MRT</button>
+            <button class="filter-tab" data-filter="KTM">KTM</button>
+            <button class="filter-tab" data-filter="Monorail">Monorail</button>
+            <button class="filter-tab" data-filter="BRT">BRT</button>
+        </div>
 
         <div class="search-bar">
-            <input type="text" id="search-input" placeholder="🔍 Search routes..." oninput="searchRoutes(this.value)">
-            <button class="btn btn-outline" onclick="refreshAll()">🔄 Refresh</button>
+            <div class="search-input-wrapper">
+                <i data-lucide="search" class="search-icon"></i>
+                <input type="text" id="search-input" placeholder="Search routes by name, code, or agency..." oninput="searchRoutes(this.value)">
+            </div>
+            <button class="btn btn-outline" onclick="refreshAll()"><i data-lucide="rotate-cw" class="lucide-sm"></i> Refresh All</button>
         </div>
 
-        <div id="loading-spinner" class="spinner"></div>
-        <div id="route-list"></div>
+        <div class="skeleton-grid" id="loading-skeleton">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+        </div>
+
+        <div class="route-grid" id="route-list"></div>
     </div>
 
     <div id="toast" class="toast"></div>
 
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="/static/js/main.js"></script>
     <script src="/static/js/dashboard.js"></script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>

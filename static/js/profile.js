@@ -28,22 +28,35 @@ function renderStats(data) {
     const grid = document.getElementById('profile-stats');
     grid.innerHTML = `
         <div class="stat-card">
-            <div class="stat-value">${data.total_feedback}</div>
-            <div class="stat-label">Crowd Reports</div>
+            <div class="stat-icon"><i data-lucide="message-square"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.total_feedback}</div>
+                <div class="stat-label">Crowd Reports</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.streak > 0 ? '🔥 ' + data.streak : '0'}</div>
-            <div class="stat-label">Feedback Streak</div>
+            <div class="stat-icon"><i data-lucide="flame"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.streak > 0 ? data.streak : '0'}</div>
+                <div class="stat-label">Feedback Streak</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.accuracy_pct !== null ? data.accuracy_pct + '%' : '—'}</div>
-            <div class="stat-label">Prediction Accuracy</div>
+            <div class="stat-icon"><i data-lucide="check-circle"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.accuracy_pct !== null ? data.accuracy_pct + '%' : '—'}</div>
+                <div class="stat-label">Prediction Accuracy</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.role || 'commuter'}</div>
-            <div class="stat-label">Role</div>
+            <div class="stat-icon"><i data-lucide="user"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.role || 'commuter'}</div>
+                <div class="stat-label">Role</div>
+            </div>
         </div>
     `;
+    lucide.createIcons();
 }
 
 function renderFeedbackHistory(feedbacks) {

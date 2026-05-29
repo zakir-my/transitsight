@@ -46,30 +46,49 @@ function renderAdminStats(data) {
     const grid = document.getElementById('admin-stats');
     grid.innerHTML = `
         <div class="stat-card">
-            <div class="stat-value">${data.predictions_today || 0}</div>
-            <div class="stat-label">Predictions Today</div>
+            <div class="stat-icon"><i data-lucide="bar-chart-3"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.predictions_today || 0}</div>
+                <div class="stat-label">Predictions Today</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.predictions_total || 0}</div>
-            <div class="stat-label">Total Predictions</div>
+            <div class="stat-icon"><i data-lucide="trending-up"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.predictions_total || 0}</div>
+                <div class="stat-label">Total Predictions</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.routes_total || 0}</div>
-            <div class="stat-label">Active Routes</div>
+            <div class="stat-icon"><i data-lucide="train-track"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.routes_total || 0}</div>
+                <div class="stat-label">Active Routes</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.stats?.total_feedback || 0}</div>
-            <div class="stat-label">Feedback Reports</div>
+            <div class="stat-icon"><i data-lucide="message-square"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.stats?.total_feedback || 0}</div>
+                <div class="stat-label">Feedback Reports</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.stats?.total_users || 0}</div>
-            <div class="stat-label">Unique Users</div>
+            <div class="stat-icon"><i data-lucide="users"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.stats?.total_users || 0}</div>
+                <div class="stat-label">Unique Users</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.stats?.total_accuracy || '—'}${data.stats?.total_accuracy ? '%' : ''}</div>
-            <div class="stat-label">Prediction Accuracy</div>
+            <div class="stat-icon"><i data-lucide="check-circle"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.stats?.total_accuracy || '—'}${data.stats?.total_accuracy ? '%' : ''}</div>
+                <div class="stat-label">Prediction Accuracy</div>
+            </div>
         </div>
     `;
+    lucide.createIcons();
 }
 
 function renderCrowdDist(dist) {

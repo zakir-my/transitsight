@@ -2,35 +2,35 @@
 
 let allRoutes = [];
 let predictions = {};
+let activeFilter = 'all';
 
 async function loadRoutes() {
-    const spinner = document.getElementById('loading-spinner');
+    const skeleton = document.getElementById('loading-skeleton');
     const list = document.getElementById('route-list');
     if (!list) return;
 
-    spinner.style.display = 'block';
+    skeleton.style.display = 'grid';
+    list.innerHTML = '';
 
     const data = await apiGet('/routes');
     if (!data || !data.routes) {
-        spinner.style.display = 'none';
-        list.innerHTML = '<p style="color: var(--red);">Failed to load routes. Make sure the server is running.</p>';
+        skeleton.style.display = 'none';
+        list.innerHTML = '<div class="empty-state">Failed to load routes. Check server status.</div>';
         return;
     }
 
     allRoutes = data.routes;
     document.getElementById('last-updated').textContent =
-        `Updated ${new Date().toLocaleTimeString('en-MY')}`;
+        `Updated ${new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}`;
 
-    // Render routes immediately with "Loading..." badges
-    renderRoutes(allRoutes);
-    spinner.style.display = 'none';
+    applyFilter();
+    skeleton.style.display = 'none';
 
-    // Load predictions lazily — one by one, updating cards as results arrive
+    // Load predictions lazily, one by one
     loadPredictionsLazy(allRoutes);
 }
 
 async function loadPredictionsLazy(routes) {
-    // Load predictions sequentially so the user sees them appear one at a time
     for (const route of routes) {
         const data = await apiGet(`/predict?route_id=${route.route_id}`);
         if (data && data.prediction) {
@@ -41,81 +41,169 @@ async function loadPredictionsLazy(routes) {
 }
 
 function updateRouteCard(routeId, pred) {
-    // Update a single route card's crowd badge without re-rendering everything
     const card = document.querySelector(`.route-card[data-route="${routeId}"]`);
     if (!card) return;
-    const badgeEl = card.querySelector('.crowd-badge');
-    if (!badgeEl) return;
 
     const level = pred.crowd_level;
     const cls = crowdClass(level);
+    const confPct = pred.confidence ? Math.round(pred.confidence * 100) : 70;
+    const source = pred.source === 'gemini_api' ? 'Gemini AI' : 'Rule-based';
+    const weather = pred.weather_context || 'Clear';
+    const timeLabel = formatTimeLabel(pred.time_context);
+    const dayLabel = pred.day_context || '';
 
-    // Update badge content
-    badgeEl.className = `crowd-badge ${cls}`;
-    badgeEl.innerHTML = `<span class="crowd-dot ${cls}"></span> ${crowdEmoji(level)} ${level}`;
+    // Map crowd level to density percentage for the bar
+    const densityMap = { 'Low': 25, 'Medium': 55, 'Full': 88 };
+    const densityPct = densityMap[level] || 50;
+
+    // Update status badge
+    const badgeEl = card.querySelector('.route-status-badge');
+    if (badgeEl) {
+        badgeEl.className = `route-status-badge badge-${cls}`;
+        badgeEl.textContent = level;
+    }
+
+    // Replace loading placeholder with full prediction
+    const predEl = card.querySelector('.route-prediction');
+    if (!predEl) return;
+
+    predEl.innerHTML = `
+        <div class="density-section">
+            <div class="density-header">
+                <span class="density-label">Est. Congestion Density</span>
+                <span class="density-value ${cls}">${densityPct}% (${level})</span>
+            </div>
+            <div class="density-bar">
+                <div class="density-fill ${cls}" style="width: ${densityPct}%"></div>
+            </div>
+        </div>
+        <div class="route-card-footer">
+            <span>${timeLabel} · ${dayLabel} · ${weather}</span>
+            <span style="color: var(--text-muted);">${source} · ${confPct}%</span>
+        </div>
+    `;
 }
 
 function renderRoutes(routes) {
     const list = document.getElementById('route-list');
     if (routes.length === 0) {
-        list.innerHTML = '<p style="color: var(--text-secondary);">No routes found.</p>';
+        list.innerHTML = '<div class="empty-state">No routes found matching your filter.</div>';
         return;
     }
 
     list.innerHTML = routes.map(route => {
-        const color = route.color || '#2196F3';
+        const color = route.color || '#3b82f6';
+        const routeType = getRouteType(route.route_id);
         const agency = route.agency || '';
 
         return `
-            <div class="route-card" data-route="${route.route_id}" onclick="window.location.href='/route?route_id=${route.route_id}'">
-                <div class="route-color" style="background: ${color};"></div>
-                <div class="route-info">
-                    <div class="route-name">${route.route_name}</div>
+            <div class="route-card" data-route="${route.route_id}" data-type="${routeType}"
+                 onclick="window.location.href='/route?route_id=${route.route_id}'">
+                <div class="route-card-color" style="background: ${color};"></div>
+                <div class="route-card-body">
+                    <div class="route-card-top">
+                        <div class="route-card-info">
+                            <div>
+                                <span class="route-code" style="color: ${color}; background: ${color}15; border: 1px solid ${color}30;">
+                                    ${route.route_id}
+                                </span>
+                                <span class="route-type-badge">${routeType}</span>
+                            </div>
+                            <div class="route-name">${route.route_name}</div>
+                        </div>
+                        <div class="route-status-badge">—</div>
+                    </div>
                     <div class="route-meta">
-                        <span>${route.route_id}</span>
                         ${agency ? `<span>${agency}</span>` : ''}
                     </div>
-                </div>
-                <div class="route-actions">
-                    <span class="crowd-badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">
-                        Loading...
-                    </span>
-                    <button class="btn btn-outline btn-small" onclick="event.stopPropagation(); window.location.href='/route?route_id=${route.route_id}'">
-                        View →
-                    </button>
+                    <div class="route-prediction">
+                        <div class="rp-loading">
+                            <span class="rp-loading-dot"></span>
+                            <span class="rp-loading-dot"></span>
+                            <span class="rp-loading-dot"></span>
+                            <span style="font-size: 0.72em; color: var(--text-muted); margin-left: 6px;">loading prediction...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-function searchRoutes(query) {
-    if (!query.trim()) {
-        renderRoutes(allRoutes);
-        // Re-apply predictions that are already loaded
-        for (const [id, pred] of Object.entries(predictions)) {
-            updateRouteCard(id, pred);
-        }
-        return;
+function getRouteType(routeId) {
+    if (routeId.startsWith('KJL')) return 'LRT';
+    if (routeId.startsWith('MRT')) return 'MRT';
+    if (routeId.startsWith('KTM')) return 'KTM';
+    if (routeId.startsWith('MON')) return 'Monorail';
+    if (routeId.startsWith('BRT')) return 'BRT';
+    return 'Transit';
+}
+
+function formatTimeLabel(timeStr) {
+    if (!timeStr) return 'Now';
+    const h = parseInt(timeStr.split(':')[0]);
+    if (h < 6) return 'Late Night';
+    if (h < 12) return 'Morning';
+    if (h < 14) return 'Midday';
+    if (h < 17) return 'Afternoon';
+    if (h < 20) return 'Evening';
+    return 'Night';
+}
+
+/* ---- Filter tabs ---- */
+function applyFilter() {
+    let filtered = allRoutes;
+    if (activeFilter !== 'all') {
+        filtered = allRoutes.filter(r => getRouteType(r.route_id) === activeFilter);
     }
-    const q = query.toLowerCase();
-    const filtered = allRoutes.filter(r =>
-        r.route_name.toLowerCase().includes(q) ||
-        r.route_id.toLowerCase().includes(q) ||
-        (r.agency || '').toLowerCase().includes(q)
-    );
     renderRoutes(filtered);
-    // Re-apply predictions
+    // Re-apply loaded predictions
     for (const [id, pred] of Object.entries(predictions)) {
         updateRouteCard(id, pred);
     }
 }
 
-async function refreshAll() {
-    predictions = {};
-    await loadRoutes();
-    showToast('Routes refreshed!');
+document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        activeFilter = this.dataset.filter;
+        applyFilter();
+    });
+});
+
+/* ---- Search ---- */
+function searchRoutes(query) {
+    if (!query.trim()) {
+        applyFilter();
+        return;
+    }
+    let filtered = allRoutes;
+    if (activeFilter !== 'all') {
+        filtered = filtered.filter(r => getRouteType(r.route_id) === activeFilter);
+    }
+    const q = query.toLowerCase();
+    filtered = filtered.filter(r =>
+        r.route_name.toLowerCase().includes(q) ||
+        r.route_id.toLowerCase().includes(q) ||
+        (r.agency || '').toLowerCase().includes(q)
+    );
+    renderRoutes(filtered);
+    for (const [id, pred] of Object.entries(predictions)) {
+        updateRouteCard(id, pred);
+    }
 }
 
-// Load on page ready
+/* ---- Refresh ---- */
+async function refreshAll() {
+    predictions = {};
+    document.querySelectorAll('.route-status-badge').forEach(b => {
+        b.textContent = '—';
+        b.className = 'route-status-badge';
+    });
+    await loadRoutes();
+    showToast('Dashboard refreshed');
+}
+
 document.addEventListener('DOMContentLoaded', loadRoutes);

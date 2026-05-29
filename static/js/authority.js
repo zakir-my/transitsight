@@ -31,22 +31,35 @@ function renderStats(data) {
     const grid = document.getElementById('authority-stats');
     grid.innerHTML = `
         <div class="stat-card">
-            <div class="stat-value">${data.predictions_today || 0}</div>
-            <div class="stat-label">Predictions Today</div>
+            <div class="stat-icon"><i data-lucide="bar-chart-3"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.predictions_today || 0}</div>
+                <div class="stat-label">Predictions Today</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.total_routes || 0}</div>
-            <div class="stat-label">Active Routes</div>
+            <div class="stat-icon"><i data-lucide="train-track"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.total_routes || 0}</div>
+                <div class="stat-label">Active Routes</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.total_predictions || 0}</div>
-            <div class="stat-label">Total Predictions</div>
+            <div class="stat-icon"><i data-lucide="trending-up"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.total_predictions || 0}</div>
+                <div class="stat-label">Total Predictions</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-value">${data.total_feedback || 0}</div>
-            <div class="stat-label">Crowd Reports</div>
+            <div class="stat-icon"><i data-lucide="message-square"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${data.total_feedback || 0}</div>
+                <div class="stat-label">Crowd Reports</div>
+            </div>
         </div>
     `;
+    lucide.createIcons();
 }
 
 function renderRouteSummaries(routes) {

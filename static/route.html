@@ -4,12 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Route Detail - TransitSight</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <nav class="navbar">
-        <a href="/" class="nav-brand">🚆 Transit<span>Sight</span></a>
-        <button class="nav-toggle" onclick="toggleNav()">☰</button>
+        <a href="/" class="nav-brand">
+            <div class="nav-brand-icon"><i data-lucide="train-front" class="lucide-brand"></i></div>
+            <div>Transit<span>Sight</span></div>
+        </a>
+        <button class="nav-toggle" onclick="toggleNav()"><i data-lucide="menu"></i></button>
         <div class="nav-links">
             <a href="/dashboard" id="back-link">← Back</a>
             <a href="/dashboard">🔍 Search</a>
@@ -78,7 +84,9 @@
 
     <div id="toast" class="toast"></div>
 
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="/static/js/main.js"></script>
     <script src="/static/js/route-detail.js"></script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>
