@@ -104,6 +104,21 @@ class TransitDataService:
         ]
 
     @staticmethod
+    def clean_route_name(raw_name, route_type):
+        """Strip redundant prefixes — the type badge already shows the category."""
+        # GTFS route_type: 0=light rail/tram, 1=subway, 2=rail, 3=bus
+        prefixes = [
+            "Electric Train Service ", "Intercity Ekspres Rakyat Timuran ",
+            "Intercity Ekspres Selatan ", "Intercity Shuttle Tebrau ",
+            "Intercity Shuttle ", "Intercity ", "KTM Komuter ",
+            "KTM ", "Rapid KL ",
+        ]
+        for p in prefixes:
+            if raw_name.startswith(p):
+                return raw_name[len(p):]
+        return raw_name
+
+    @staticmethod
     def seed_default_routes():
         """Seed routes from GTFS API with hardcoded fallback."""
         from app.database import get_db
@@ -126,6 +141,8 @@ class TransitDataService:
                             rname = r.get("route_long_name") or r.get("route_short_name", "")
                             if not rname:
                                 continue
+                            rt = r.get("route_type", "")
+                            rname = TransitDataService.clean_route_name(rname, rt)
                             conn.execute(
                                 "INSERT OR IGNORE INTO routes (route_id, route_name, agency, color, route_type) VALUES (?, ?, ?, ?, ?)",
                                 (rid, rname, gtfs.get("agency", [{}])[0].get("agency_name", agency_key) if gtfs.get("agency") else agency_key,

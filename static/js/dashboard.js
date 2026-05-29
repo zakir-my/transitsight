@@ -96,7 +96,7 @@ function renderRoutes(routes) {
 
     list.innerHTML = routes.map(route => {
         const color = route.color || '#3b82f6';
-        const routeType = getRouteType(route.route_id);
+        const routeType = getRouteType(route.route_id, route.route_type);
         const agency = route.agency || '';
 
         return `
@@ -133,12 +133,23 @@ function renderRoutes(routes) {
     }).join('');
 }
 
-function getRouteType(routeId) {
+function getRouteType(routeId, routeType) {
+    // Use GTFS route_type: 0=light rail, 1=subway, 2=rail
+    // But KTMB classifies komuter as type=0 — treat KTMB routes as 'KTM'
+    const ktmPrefixes = ['KC', 'KA', 'KB', 'ETS', 'ES', 'ERT', 'SH', 'ST', 'EP', 'EG', '100'];
+    const isKTM = ktmPrefixes.some(p => routeId.startsWith(p));
+
+    if (isKTM) return 'KTM';
     if (routeId.startsWith('KJL')) return 'LRT';
-    if (routeId.startsWith('MRT')) return 'MRT';
-    if (routeId.startsWith('KTM')) return 'KTM';
-    if (routeId.startsWith('MON')) return 'Monorail';
-    if (routeId.startsWith('BRT')) return 'BRT';
+    if (routeId.startsWith('MRT') || routeId.startsWith('KG') || routeId.startsWith('PY')) return 'MRT';
+    if (routeId.startsWith('MON') || routeId.startsWith('MR')) return 'Monorail';
+    if (routeId.startsWith('BRT') || routeId.startsWith('SJ')) return 'BRT';
+
+    // GTFS type fallback
+    if (routeType !== undefined && routeType !== null && routeType !== '') {
+        const map = { '0': 'LRT', '1': 'MRT', '2': 'KTM', '3': 'Bus' };
+        if (map[String(routeType)]) return map[String(routeType)];
+    }
     return 'Transit';
 }
 
@@ -174,7 +185,7 @@ function updateRouteCardError(routeId) {
 function applyFilter() {
     let filtered = allRoutes;
     if (activeFilter !== 'all') {
-        filtered = allRoutes.filter(r => getRouteType(r.route_id) === activeFilter);
+        filtered = allRoutes.filter(r => getRouteType(r.route_id, r.route_type) === activeFilter);
     }
     renderRoutes(filtered);
     // Re-apply loaded predictions
@@ -201,7 +212,7 @@ function searchRoutes(query) {
     }
     let filtered = allRoutes;
     if (activeFilter !== 'all') {
-        filtered = filtered.filter(r => getRouteType(r.route_id) === activeFilter);
+        filtered = filtered.filter(r => getRouteType(r.route_id, r.route_type) === activeFilter);
     }
     const q = query.toLowerCase();
     filtered = filtered.filter(r =>
