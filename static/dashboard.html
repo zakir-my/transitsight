@@ -25,6 +25,12 @@
     </nav>
 
     <div class="container">
+        <!-- JS TEST: disappears if JavaScript is working -->
+        <div id="js-test" style="background:#ff4444;color:#fff;padding:8px 16px;border-radius:6px;margin-bottom:12px;font-size:0.85em;">
+            ⚠ JavaScript is not running — scripts may be blocked
+        </div>
+        <script>document.getElementById('js-test').style.display = 'none';</script>
+
         <div class="page-header">
             <div>
                 <h2>Transit Fleet Dashboard</h2>
