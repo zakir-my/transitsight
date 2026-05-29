@@ -2,7 +2,10 @@
 
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Optional
+
+KL_TZ = ZoneInfo("Asia/Kuala_Lumpur")
 from app.config import settings
 
 
@@ -73,7 +76,7 @@ Respond with ONLY one word: Low, Medium, or Full
         Incorporates real user feedback for self-correction.
         Falls back to rule-based logic if API is unavailable.
         """
-        now = datetime.now()
+        now = datetime.now(KL_TZ)
         time_str = now.strftime("%H:%M")
         day_str = now.strftime("%A")
 
