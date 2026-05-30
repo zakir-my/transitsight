@@ -91,9 +91,12 @@ async function submitFeedback(level) {
 
     if (result && result.status === 'submitted') {
         document.getElementById('feedback-msg').textContent = result.message || 'Thank you! 🎉';
+        const badge = result.badge;
+        const badgeStr = badge ? ` ${badge.name}` : '';
+        const nextStr = badge && badge.next ? ` → next: ${badge.next} (${badge.remaining} more)` : '';
         const streakMsg = result.streak > 0
-            ? `✅ Thanks! Streak: ${result.streak} 🔥 (${result.total_feedback} total)`
-            : '✅ Feedback submitted! Thank you for helping improve predictions.';
+            ? `✅ Thanks! Streak: ${result.streak} 🔥${badgeStr}${nextStr}`
+            : `✅ Feedback submitted!${badgeStr}${nextStr}`;
         showToast(streakMsg);
 
         // Update streak display

@@ -31,15 +31,20 @@ class AIPredictionService:
 
     def build_prompt(self, time: str, day: str, weather_condition: str,
                      temperature: float, route_name: str, route_id: str,
-                     feedback_context: Optional[str] = None) -> str:
+                     feedback_context: Optional[str] = None,
+                     gtfs_context: Optional[str] = None) -> str:
         """
         Build a structured prompt for the Gemini API.
         The prompt asks the AI to classify crowd level based on contextual variables
-        and optionally includes real user feedback for self-correction.
+        and optionally includes real user feedback for self-correction and GTFS data.
         """
         feedback_line = ""
         if feedback_context:
             feedback_line = f"\n{feedback_context}\n"
+
+        gtfs_line = ""
+        if gtfs_context:
+            gtfs_line = f"\nTransit schedule data (from data.gov.my GTFS):\n{gtfs_context}\n"
 
         prompt = f"""You are TransitSight, a smart public transport crowd predictor for Malaysia.
 Your task is to predict the crowd level for a transit route based on the following context.
@@ -50,7 +55,7 @@ Context:
 - Day: {day}
 - Weather: {weather_condition}
 - Temperature: {temperature}°C
-{feedback_line}
+{gtfs_line}{feedback_line}
 Based on your knowledge of typical crowd patterns in Malaysian public transit,
 classify the expected crowd level as exactly one of: Low, Medium, or Full.
 
@@ -70,10 +75,11 @@ Respond with ONLY one word: Low, Medium, or Full
 
     def predict_crowd(self, route_name: str, route_id: str,
                        weather_condition: str = "Clear",
-                       temperature: float = 28.0) -> dict:
+                       temperature: float = 28.0,
+                       gtfs_context: Optional[str] = None) -> dict:
         """
         Predict crowd level for a route using Gemini API.
-        Incorporates real user feedback for self-correction.
+        Incorporates real user feedback for self-correction and GTFS schedule data.
         Falls back to rule-based logic if API is unavailable.
         """
         now = datetime.now(KL_TZ)
@@ -83,21 +89,28 @@ Respond with ONLY one word: Low, Medium, or Full
         # Get feedback context for this route
         feedback_context = self._get_feedback_context(route_id)
 
-        # Build prompt with feedback
+        # Build prompt with feedback and GTFS data
         prompt = self.build_prompt(time_str, day_str, weather_condition,
                                    temperature, route_name, route_id,
-                                   feedback_context)
+                                   feedback_context, gtfs_context)
 
         # Try Gemini API
         model = self._get_model()
         if model:
             try:
+                import time as _time
+                _start = _time.time()
                 response = model.generate_content(prompt)
+                _elapsed = int((_time.time() - _start) * 1000)
+                from app.database import log_api_call
+                log_api_call("gemini", "generate_content", "success", _elapsed)
                 raw = response.text.strip().upper()
                 return self._parse_response(raw, time_str, day_str,
                                             weather_condition, temperature,
                                             feedback_context)
             except Exception:
+                from app.database import log_api_call
+                log_api_call("gemini", "generate_content", "error", 0)
                 pass  # Fall through to rule-based
 
         # Rule-based fallback (now also feedback-aware)

@@ -30,18 +30,28 @@ class WeatherService:
             return _weather_cache
 
         try:
+            start = time.time()
             resp = requests.get(settings.WEATHER_BASE_URL, timeout=10)
+            elapsed_ms = int((time.time() - start) * 1000)
             if resp.status_code == 200:
                 data = resp.json()
                 if isinstance(data, list) and len(data) > 0:
                     _weather_cache = WeatherService._parse_weather_response(data)
                     _weather_cache_time = time.time()
+                    from app.database import log_api_call
+                    log_api_call("weather", settings.WEATHER_BASE_URL, "success", elapsed_ms)
                     return _weather_cache
                 _weather_cache = data
                 _weather_cache_time = time.time()
+                from app.database import log_api_call
+                log_api_call("weather", settings.WEATHER_BASE_URL, "success", elapsed_ms)
                 return data
+            else:
+                from app.database import log_api_call
+                log_api_call("weather", settings.WEATHER_BASE_URL, f"http_{resp.status_code}", elapsed_ms)
         except (requests.RequestException, ValueError) as e:
-            pass
+            from app.database import log_api_call
+            log_api_call("weather", settings.WEATHER_BASE_URL, "error", 0)
 
         # Use cached data even if stale as fallback
         if _weather_cache:

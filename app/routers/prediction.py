@@ -27,11 +27,15 @@ async def predict_crowd(route_id: str = Query(..., description="Route ID to pred
     weather = WeatherService.fetch_current_weather()
 
     # Get AI prediction
+    # Fetch GTFS context for richer predictions (graceful if unavailable)
+    gtfs_context = TransitDataService.get_gtfs_context(route_id)
+
     prediction = ai_service.predict_crowd(
         route_name=route["route_name"],
         route_id=route["route_id"],
         weather_condition=weather.get("condition", "Clear"),
         temperature=weather.get("temperature", 28.0),
+        gtfs_context=gtfs_context or None,
     )
 
     # Store prediction in database

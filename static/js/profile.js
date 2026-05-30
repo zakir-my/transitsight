@@ -25,8 +25,21 @@ async function loadProfile() {
 }
 
 function renderStats(data) {
+    const badge = data.badge || { name: '🌱 Newcomer', tier: 'newcomer', next: '🥉 Bronze', remaining: 1 };
+    const nextBadge = badge.next
+        ? `<div style="font-size: 0.7em; color: var(--text-muted); margin-top: 2px;">${badge.remaining} more to ${badge.next}</div>`
+        : '<div style="font-size: 0.7em; color: var(--accent); margin-top: 2px;">Max tier!</div>';
+
     const grid = document.getElementById('profile-stats');
     grid.innerHTML = `
+        <div class="stat-card">
+            <div class="stat-icon"><i data-lucide="award"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">${badge.name}</div>
+                <div class="stat-label">Badge</div>
+                ${nextBadge}
+            </div>
+        </div>
         <div class="stat-card">
             <div class="stat-icon"><i data-lucide="message-square"></i></div>
             <div class="stat-body">

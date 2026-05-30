@@ -5,6 +5,29 @@ from typing import Optional
 from app.database import get_db
 
 
+# Badge tiers for gamification
+BADGE_TIERS = [
+    (1, "🥉 Bronze", "bronze"),
+    (5, "🥈 Silver", "silver"),
+    (20, "🥇 Gold", "gold"),
+    (50, "💎 Platinum", "platinum"),
+    (100, "👑 Diamond", "diamond"),
+]
+
+
+def get_badge(total_feedback: int) -> dict:
+    """Return the user's current badge based on total feedback count."""
+    badge = {"name": "🌱 Newcomer", "tier": "newcomer", "next": "🥉 Bronze", "remaining": 1}
+    for threshold, name, tier in BADGE_TIERS:
+        if total_feedback >= threshold:
+            badge = {"name": name, "tier": tier, "next": None, "remaining": 0}
+        else:
+            badge["next"] = name
+            badge["remaining"] = threshold - total_feedback
+            break
+    return badge
+
+
 class FeedbackService:
     """Manages user feedback collection, storage, and analytics."""
 
@@ -13,12 +36,20 @@ class FeedbackService:
                         reported_level: str, user_id: str = "anonymous",
                         comment: str = "") -> dict:
         """Store user feedback about a crowd prediction."""
+        from app.database import log_api_call
+
+        feedback_id = None
+        streak = 0
+        total = 0
+        badge = {"name": "🌱 Newcomer", "tier": "newcomer"}
+
         with get_db() as conn:
             cursor = conn.execute(
                 """INSERT INTO feedback (route_id, user_id, predicted_level, reported_level, comment)
                    VALUES (?, ?, ?, ?, ?)""",
                 (route_id, user_id, predicted_level, reported_level, comment),
             )
+            feedback_id = cursor.lastrowid
 
             # Update user feedback count
             cursor2 = conn.execute(
@@ -44,13 +75,19 @@ class FeedbackService:
             streak = streak_row["streak"] if streak_row else 0
             total = streak_row["feedback_count"] if streak_row else 0
 
-            return {
-                "status": "submitted",
-                "feedback_id": cursor.lastrowid,
-                "streak": streak,
-                "total_feedback": total,
-                "message": f"Thanks! You've submitted {total} report{'s' if total != 1 else ''}. Streak: {streak} 🔥",
-            }
+            badge = get_badge(total)
+
+        # Audit log outside transaction to avoid SQLite lock
+        log_api_call("feedback", f"route/{route_id}", "submitted", 0)
+
+        return {
+            "status": "submitted",
+            "feedback_id": feedback_id,
+            "streak": streak,
+            "total_feedback": total,
+            "badge": badge,
+            "message": f"Thanks! You've submitted {total} report{'s' if total != 1 else ''}. Streak: {streak} 🔥",
+        }
 
     @staticmethod
     def get_route_stats(route_id: str) -> dict:

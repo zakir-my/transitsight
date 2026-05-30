@@ -4,6 +4,7 @@ import requests
 import io
 import csv
 import zipfile
+import time
 from typing import Optional
 from app.config import settings
 from app.database import get_db
@@ -31,8 +32,12 @@ class TransitDataService:
             params["category"] = category
 
         try:
+            start = time.time()
             resp = requests.get(url, params=params, timeout=30)
+            elapsed = int((time.time() - start) * 1000)
             if resp.status_code != 200:
+                from app.database import log_api_call
+                log_api_call(f"gtfs-static/{agency}", url, f"http_{resp.status_code}", elapsed)
                 return {"error": f"API returned status {resp.status_code}"}
 
             # GTFS data comes as ZIP of CSV files
@@ -42,6 +47,8 @@ class TransitDataService:
                 stops = TransitDataService._parse_csv_in_zip(z, "stops.txt")
                 trips = TransitDataService._parse_csv_in_zip(z, "trips.txt")
                 stop_times = TransitDataService._parse_csv_in_zip(z, "stop_times.txt")
+                from app.database import log_api_call
+                log_api_call(f"gtfs-static/{agency}", url, "success", elapsed)
                 return {
                     "routes": routes[:100] if routes else [],
                     "stops": stops[:200] if stops else [],
@@ -55,6 +62,8 @@ class TransitDataService:
                 return {"raw": data}
 
         except requests.RequestException as e:
+            from app.database import log_api_call
+            log_api_call(f"gtfs-static/{agency}", url, "error", 0)
             return {"error": str(e)}
 
     @staticmethod
@@ -66,9 +75,13 @@ class TransitDataService:
             params["category"] = category
 
         try:
+            start = time.time()
             resp = requests.get(url, params=params, timeout=15)
+            elapsed = int((time.time() - start) * 1000)
             if resp.status_code == 200:
                 try:
+                    from app.database import log_api_call
+                    log_api_call(f"gtfs-realtime/{agency}", url, "success", elapsed)
                     return resp.json()
                 except Exception:
                     return {"raw": "binary protobuf data"}
@@ -119,6 +132,78 @@ class TransitDataService:
             if raw_name.startswith(p):
                 return raw_name[len(p):]
         return raw_name
+
+    @staticmethod
+    def get_gtfs_context(route_id: str) -> str:
+        """
+        Fetch GTFS Static and Realtime data for a route and return
+        a text summary suitable for injection into the AI prompt.
+        Returns empty string if no data is available.
+        """
+        parts = []
+        agency_key, category = TransitDataService._route_to_agency(route_id)
+
+        # 1. GTFS Static — upcoming departures
+        try:
+            gtfs = TransitDataService.fetch_static_gtfs(agency_key, category=category)
+            if "error" not in gtfs and "trips" in gtfs and "stop_times" in gtfs:
+                trips = gtfs.get("trips", [])
+                stop_times = gtfs.get("stop_times", [])
+
+                # Count trips for this route
+                route_trips = [t for t in trips if t.get("route_id") == route_id]
+                trip_ids = {t["trip_id"] for t in route_trips}
+
+                # Get upcoming stop times for this route's trips
+                route_times = [st for st in stop_times if st.get("trip_id") in trip_ids]
+                # Take the first few departure times
+                upcoming = sorted(route_times, key=lambda st: st.get("departure_time", "99:99"))[:8]
+
+                if route_trips:
+                    parts.append(
+                        f"- 📅 Scheduled trips today: {len(route_trips)} trips\n"
+                    )
+                    if upcoming:
+                        departures = ", ".join(
+                            st.get("departure_time", "??")[:5] for st in upcoming
+                        )
+                        parts.append(f"  Departure times: {departures}")
+
+                routes_data = gtfs.get("routes", [])
+                route_info = next((r for r in routes_data if r.get("route_id") == route_id), None)
+                if route_info:
+                    short = route_info.get("route_short_name", "")
+                    long = route_info.get("route_long_name", "")
+                    desc = route_info.get("route_desc", "")
+                    if desc:
+                        parts.append(f"- Route description: {desc}")
+                    elif long and long != short:
+                        parts.append(f"- Route: {long}")
+        except Exception:
+            pass
+
+        # 2. GTFS Realtime — active vehicles
+        try:
+            rt = TransitDataService.fetch_realtime(agency_key, category=category)
+            if "error" not in rt:
+                # Realtime data may be a list of vehicle positions or entity array
+                entities = rt if isinstance(rt, list) else rt.get("entity", rt.get("entities", []))
+                if isinstance(entities, list) and entities:
+                    parts.append(f"- 🚌 Active vehicles tracked: {len(entities)}")
+        except Exception:
+            pass
+
+        return "\n".join(parts) if parts else ""
+
+    @staticmethod
+    def _route_to_agency(route_id: str) -> tuple:
+        """Map a route ID to (agency_key, category) for GTFS API calls."""
+        route_prefix = route_id[:3].upper() if len(route_id) >= 3 else route_id.upper()
+        if route_prefix in ("KJL", "MRT", "MON", "BRT"):
+            return ("prasarana", "rapid-rail-kl")
+        elif route_prefix == "KTM":
+            return ("ktmb", None)
+        return ("prasarana", "rapid-rail-kl")  # default fallback
 
     @staticmethod
     def seed_default_routes():

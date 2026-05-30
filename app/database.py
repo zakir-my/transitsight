@@ -108,3 +108,17 @@ def init_db():
             INSERT OR IGNORE INTO users (user_id, name, email, role)
             VALUES ('admin', 'Admin', 'admin@transitsight.my', 'admin');
         """)
+
+
+def log_api_call(service: str, endpoint: str = "", status: str = "success",
+                 response_time_ms: int = 0):
+    """Record an external API call in the audit log."""
+    try:
+        with get_db() as conn:
+            conn.execute(
+                """INSERT INTO api_log (service, endpoint, status, response_time_ms)
+                   VALUES (?, ?, ?, ?)""",
+                (service, endpoint, status, response_time_ms),
+            )
+    except Exception:
+        pass  # Audit logging must never break the main flow

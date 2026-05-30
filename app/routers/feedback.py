@@ -81,12 +81,16 @@ async def get_user_profile(user_id: str):
     total_fb = accuracy["total"] if accuracy else 0
     acc_val = round(accuracy["accuracy_pct"], 1) if accuracy and accuracy["accuracy_pct"] else None
 
+    from app.services.feedback_service import get_badge
+    badge = get_badge(total_fb)
+
     return {
         "user_id": user_id,
         "streak": user["streak"] if user else 0,
         "total_feedback": total_fb,
         "accuracy_pct": acc_val,
         "role": user["role"] if user else "commuter",
+        "badge": badge,
         "feedback_history": [
             {
                 "route_name": f["route_name"],
